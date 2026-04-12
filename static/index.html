@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Node — AI Intelligence Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,700;9..144,900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --cream:#FFF2C5;--peach:#FFE8E5;--ice:#E0F1FF;
+  --black:#111111;--white:#FFFFFF;--page-bg:#0D0D0D;
+  --live:#EF4444;
+  --page-text:#F0F0F0;
+  --page-text2:rgba(255,255,255,0.5);
+  --page-text3:rgba(255,255,255,0.25);
+  --text:rgba(17,17,17,1);
+  --text-body:rgba(17,17,17,0.75);
+  --text2:rgba(17,17,17,0.45);
+  --text3:rgba(17,17,17,0.25);
+  /* Diffused light system — huge spread, low alpha, tinted ambient occlusion */
+  --glow-cream:255,230,140;
+  --glow-peach:255,180,170;
+  --glow-ice:150,200,255;
+  --ease-quintic:cubic-bezier(0.23, 1, 0.32, 1);
+}
+html,body{
+  height:100%;overflow:hidden;
+  background:#000;
+  font-family:'Outfit',-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  color:var(--page-text);
+}
+
+/* ═══ APP SHELL ═══ */
+.app{
+  height:100%;display:flex;flex-direction:column;
+  max-width:430px;margin:0 auto;
+  background:var(--page-bg);overflow:hidden;position:relative;
+}
+@media(min-width:431px){
+  .app{border-radius:28px;margin-top:10px;height:calc(100% - 20px);box-shadow:0 8px 40px rgba(0,0,0,0.4)}
+}
+
+/* ═══ HEADER ═══ */
+.header{
+  padding:16px 20px 0;flex-shrink:0;
+  position:relative;z-index:100;
+}
+.header-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:14px;
+}
+.logo{font-size:24px;font-weight:800;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;color:var(--page-text)}
+.logo-icon{font-size:20px;color:#F59E0B}
+.refresh-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,0.06);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--page-text2);transition:all .2s;
+}
+.refresh-btn:hover{background:rgba(255,255,255,0.1)}
+.refresh-btn.spinning svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Category pills — horizontally scrollable with fade mask on the right to hint at more */
+.cat-pills{
+  display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;padding-right:24px;
+  scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right, black calc(100% - 40px), transparent);
+  mask-image:linear-gradient(to right, black calc(100% - 40px), transparent);
+}
+.cat-pills::-webkit-scrollbar{display:none}
+.cpill{
+  font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;
+  padding:10px 20px;border-radius:9999px;border:none;cursor:pointer;
+  white-space:nowrap;transition:all .2s;
+}
+.cpill.on{background:var(--white);color:var(--black)}
+.cpill:not(.on){background:rgba(255,255,255,0.08);color:var(--page-text2);border:1px solid rgba(255,255,255,0.06)}
+
+/* Time pills */
+.time-pills{display:flex;gap:6px;padding:0 0 10px}
+.tpill{
+  font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;
+  padding:6px 14px;border-radius:9999px;border:none;cursor:pointer;
+  white-space:nowrap;transition:all .2s;
+}
+.tpill.on{background:var(--cream);color:var(--black);border:1px solid rgba(255,255,255,0.08)}
+.tpill:not(.on){background:transparent;color:var(--page-text3);border:1px solid transparent}
+
+/* ═══ SEARCH BAR ═══ */
+.search-bar{
+  position:absolute;top:0;left:0;right:0;
+  padding:16px 20px;
+  background:var(--page-bg);z-index:150;
+  transform:translateY(-100%);opacity:0;
+  transition:all .3s cubic-bezier(.22,1,.36,1);
+}
+.search-bar.open{transform:translateY(0);opacity:1}
+.search-input-wrap{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:16px;padding:12px 16px;
+}
+.search-input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'Outfit',sans-serif;font-size:16px;
+  color:var(--page-text);
+}
+.search-input::placeholder{color:var(--page-text3)}
+.search-close{background:none;border:none;cursor:pointer;color:var(--page-text2);font-size:18px;padding:4px}
+
+/* ═══ CARD STACK ═══ */
+.stack-area{
+  flex:1;position:relative;
+  display:flex;flex-direction:column;
+  align-items:center;          /* horizontal center (x-axis for flex column) */
+  justify-content:center;      /* vertical center (y-axis for flex column) */
+  overflow:hidden;
+  padding:4px 20px 96px;       /* bottom padding clears floating nav pill */
+  filter:saturate(1.08) brightness(1.02);  /* compensation for lost backdrop-filter saturate */
+}
+.stack{
+  position:relative;
+  width:100%;
+  height:auto;                 /* CRITICAL: hug .stack-top's natural height so .stack-bg inset:0 = top card's size */
+  transform:translateY(-30px); /* lift the card pile so bg cards don't collide with the slider below */
+}
+.stack-counter{
+  position:absolute;
+  bottom:104px;
+  left:20px;right:20px;
+  z-index:15;                  /* above stack-bg (z:10) so it's never occluded */
+  padding-top:16px;            /* anti-collision buffer from descending bg cards */
+}
+
+/* Ripple canvas — light layer over everything, screen-blended onto whatever's below */
+.ripple-canvas{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  pointer-events:none;
+  z-index:20;                  /* above .stack-top (z:10) — illumination from above */
+  mix-blend-mode:screen;       /* canvas pixels ADD brightness to the card/bezel below */
+}
+
+/* Behind cards — empty colored shapes, just edges peeking */
+.stack-bg{
+  position:absolute;
+  left:0;right:0;top:0;bottom:0;
+  border-radius:28px;
+  will-change:transform,box-shadow;
+  transition:box-shadow .4s var(--ease-quintic);
+}
+.stack-bg.c-cream{box-shadow:0 24px 80px -20px rgba(var(--glow-cream),0.22),0 8px 32px -8px rgba(var(--glow-cream),0.12)}
+.stack-bg.c-peach{box-shadow:0 24px 80px -20px rgba(var(--glow-peach),0.22),0 8px 32px -8px rgba(var(--glow-peach),0.12)}
+.stack-bg.c-ice{box-shadow:0 24px 80px -20px rgba(var(--glow-ice),0.22),0 8px 32px -8px rgba(var(--glow-ice),0.12)}
+
+/* Top card — content-hugging with max cap; ripple canvas illuminates via mix-blend-mode:screen
+   NOTE: backdrop-filter was removed because it creates an isolation group that breaks
+   mix-blend-mode on the canvas sibling. Saturation compensation is applied to .stack-area. */
+.stack-top{
+  position:relative;           /* no longer absolute-filling — let flex parent center it */
+  width:100%;
+  height:auto;                 /* hug content height */
+  max-height:75vh;             /* cap tall cards */
+  border-radius:28px;
+  padding:28px 28px 22px;
+  overflow-y:auto;             /* internal scroll when content exceeds max-height */
+  overflow-x:hidden;
+  will-change:transform,box-shadow,filter;
+  cursor:pointer;
+  user-select:none;-webkit-user-select:none;
+  touch-action:pan-y;
+  z-index:10;
+  display:flex;flex-direction:column;
+  transition:box-shadow .5s var(--ease-quintic);
+}
+.stack-top::-webkit-scrollbar{display:none}
+.stack-top.swiping{overflow:hidden;transition:none}
+.stack-top.flinging{filter:blur(1.2px)}
+
+/* Card colors — 0.82 opacity: the golden-point between solid card and frosted-glass halo */
+.c-cream{background:rgba(255,242,197,0.82)}
+.c-peach{background:rgba(255,232,229,0.82)}
+.c-ice{background:rgba(224,241,255,0.82)}
+
+/* Diffused aura per tint — massive spread, minimal alpha */
+.stack-top.c-cream{box-shadow:0 40px 120px -20px rgba(var(--glow-cream),0.35),0 12px 48px -8px rgba(var(--glow-cream),0.18),inset 0 1px 0 rgba(255,255,255,0.5)}
+.stack-top.c-peach{box-shadow:0 40px 120px -20px rgba(var(--glow-peach),0.35),0 12px 48px -8px rgba(var(--glow-peach),0.18),inset 0 1px 0 rgba(255,255,255,0.5)}
+.stack-top.c-ice{box-shadow:0 40px 120px -20px rgba(var(--glow-ice),0.35),0 12px 48px -8px rgba(var(--glow-ice),0.18),inset 0 1px 0 rgba(255,255,255,0.5)}
+
+/* LIVE badge */
+.live{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--live);color:white;
+  font-size:10px;font-weight:700;padding:4px 10px;
+  border-radius:6px;text-transform:uppercase;
+  letter-spacing:0.06em;margin-bottom:14px;
+  width:fit-content;
+}
+.live-dot{width:5px;height:5px;border-radius:50%;background:white;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.card-h{
+  font-size:24px;font-weight:800;line-height:1.2;
+  letter-spacing:-0.02em;color:var(--black);margin:10px 0 14px 0;
+}
+.card-meta{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.card-snippet{
+  font-size:15px;line-height:1.6;color:#444;
+  margin-top:0;
+  font-weight:450;
+}
+/* .card-body no longer used on card view — kept for potential future reuse */
+.card-body{
+  font-size:14px;line-height:1.6;color:var(--text-body);
+}
+.card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:24px}
+.card-cat{
+  font-size:11px;font-weight:600;color:var(--text);
+  text-transform:uppercase;letter-spacing:0.1em;
+  padding:6px 12px;border-radius:9999px;
+  background:rgba(17,17,17,0.06);
+  border:1px solid rgba(17,17,17,0.08);
+}
+.bk-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--text3);transition:color .15s;padding:4px;
+}
+.bk-btn:hover{color:var(--text)}
+.bk-btn.on{color:#F59E0B}
+.bk-btn.on svg{fill:#F59E0B;stroke:#F59E0B}
+
+/* ═══ PURE TYPOGRAPHIC FLOW — thumbnail removed, summary un-clamped ═══ */
+
+/* Bookmark button — circular chip at card-foot, right-aligned opposite the category pill */
+.bk-btn{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:rgba(17,17,17,0.06);
+  border:1px solid rgba(17,17,17,0.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text2);
+  padding:0;
+  transition:background .2s,color .2s,border-color .2s;
+}
+.bk-btn:hover{
+  background:rgba(17,17,17,0.1);
+  color:var(--text);
+}
+.bk-btn svg{width:17px;height:17px;transition:all .2s}
+.bk-btn.on{
+  background:rgba(245,158,11,0.12);
+  border-color:rgba(245,158,11,0.35);
+  color:#F59E0B;
+}
+.bk-btn.on svg{fill:#F59E0B;stroke:#F59E0B}
+
+/* Bookmark micro-interaction — spring pop + glow pulse on toggle */
+@keyframes bk-pop{
+  0%   {transform:scale(1)}
+  40%  {transform:scale(1.32)}
+  70%  {transform:scale(0.93)}
+  100% {transform:scale(1)}
+}
+@keyframes bk-glow{
+  0%   {box-shadow:0 0 0 0 rgba(245,158,11,0.55)}
+  100% {box-shadow:0 0 0 16px rgba(245,158,11,0)}
+}
+.bk-btn.pulsing{animation:bk-pop .5s var(--ease-quintic)}
+.bk-btn.pulsing.on{
+  animation:bk-pop .5s var(--ease-quintic),bk-glow .7s ease-out;
+}
+
+/* Card meta pill — tags & favicon */
+.card-meta{gap:8px}
+.meta-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:9999px;
+  background:rgba(17,17,17,0.06);
+  font-size:11px;font-weight:600;
+  color:var(--text2);
+  letter-spacing:0.02em;
+}
+.meta-pill.live{
+  background:var(--live);color:white;
+  text-transform:uppercase;letter-spacing:0.06em;
+}
+.fav-icon{
+  width:14px;height:14px;border-radius:3px;
+  flex-shrink:0;
+  object-fit:cover;
+  background:rgba(17,17,17,0.08);
+}
+.read-time{
+  font-size:11px;color:var(--text2);font-weight:500;
+}
+
+/* Card foot — category pill only (bookmark moved to thumbnail) */
+.card-foot{gap:8px}
+.card-cat{flex:0 0 auto}
+
+/* Search keyword highlight — subtle dark tint + bold, readable on cream/peach/ice */
+.card-h mark,.card-snippet mark,.art-text mark,.art-title mark{
+  background:rgba(245,158,11,0.22);
+  color:inherit;
+  font-weight:700;
+  border-radius:3px;
+  padding:0 3px;
+  box-decoration-break:clone;
+  -webkit-box-decoration-break:clone;
+}
+/* Detail view title mark — slightly stronger since titles are already bold */
+.art-title mark{background:rgba(245,158,11,0.28)}
+
+/* Search bar — enhanced with result counter, history, and timeline sparkline */
+.search-counter{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 20px 2px;
+  color:var(--page-text3);
+  font-size:12px;font-weight:500;letter-spacing:0.02em;
+}
+.search-counter-text{flex:1;min-width:0;line-height:1.45}
+.search-counter strong{color:var(--page-text);font-weight:600}
+#timeline-sparkline{
+  flex-shrink:0;
+  opacity:0.92;
+  image-rendering:crisp-edges;
+  cursor:pointer;
+}
+/* Filter badge when a bar is selected */
+.timeline-filter-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:9999px;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(245,158,11,0.35);
+  font-size:11px;font-weight:600;
+  color:var(--page-text);margin-top:4px;
+  cursor:pointer;
+  transition:background .2s;
+}
+.timeline-filter-badge:hover{background:rgba(255,255,255,0.18)}
+.timeline-filter-badge .close{
+  font-size:13px;color:rgba(255,100,100,0.7);
+  margin-left:2px;
+}
+.timeline-wrap{
+  display:flex;flex-direction:column;align-items:flex-end;
+  gap:2px;flex-shrink:0;
+}
+.timeline-label{
+  font-size:9px;color:var(--page-text3);
+  letter-spacing:0.08em;text-transform:uppercase;
+  opacity:0.7;
+}
+.search-history{
+  padding:12px 20px 4px;
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.search-history-label{
+  display:block;width:100%;
+  font-size:11px;color:var(--page-text3);
+  text-transform:uppercase;letter-spacing:0.08em;
+  margin-bottom:8px;font-weight:600;
+}
+.search-chip{
+  font-family:'Outfit',sans-serif;font-size:12px;
+  padding:6px 12px;border-radius:9999px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--page-text2);cursor:pointer;
+  transition:all .2s;
+}
+.search-chip:hover{background:rgba(255,255,255,0.1);color:var(--page-text)}
+.search-chip.clear{color:rgba(255,100,100,0.7);border-color:rgba(255,100,100,0.15)}
+
+/* Scrubbable slider — replaces the old progress bar with a draggable range input */
+.stack-counter{
+  display:flex;align-items:center;gap:10px;
+  font-size:11px;color:var(--page-text3);
+  letter-spacing:0.04em;font-variant-numeric:tabular-nums;
+}
+#stack-slider{
+  -webkit-appearance:none;
+  appearance:none;
+  flex:1;height:2px;
+  background:rgba(255,255,255,0.10);
+  border-radius:2px;
+  outline:none;
+  cursor:pointer;
+  transition:background .2s;
+}
+#stack-slider:hover{background:rgba(255,255,255,0.16)}
+/* Amber thumb — glowing dot */
+#stack-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:#F59E0B;
+  cursor:pointer;
+  border:2px solid rgba(0,0,0,0.25);
+  box-shadow:0 0 10px rgba(245,158,11,0.45),0 2px 6px rgba(0,0,0,0.3);
+  transition:transform .15s,box-shadow .15s;
+}
+#stack-slider::-webkit-slider-thumb:hover{
+  transform:scale(1.2);
+  box-shadow:0 0 16px rgba(245,158,11,0.6),0 2px 8px rgba(0,0,0,0.35);
+}
+#stack-slider::-webkit-slider-thumb:active{
+  transform:scale(1.05);
+}
+#stack-slider::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;
+  background:#F59E0B;
+  cursor:pointer;
+  border:2px solid rgba(0,0,0,0.25);
+  box-shadow:0 0 10px rgba(245,158,11,0.45);
+}
+
+/* ═══ SLICE B — DETAIL PAGE SURGERY ═══ */
+
+/* Glass header on detail — OK to use backdrop-filter here, no canvas conflict */
+.art-top{
+  background:rgba(255,255,255,0.55) !important;
+  backdrop-filter:blur(16px) saturate(1.3);
+  -webkit-backdrop-filter:blur(16px) saturate(1.3);
+  border-bottom:1px solid rgba(17,17,17,0.06);
+}
+
+/* Source cards — proper physical-card feel with border + inner shadow */
+.art-link{
+  background:rgba(255,255,255,0.45) !important;
+  border:1px solid rgba(17,17,17,0.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);
+  padding:14px 16px 14px 14px !important;
+}
+.art-link:hover{
+  background:rgba(255,255,255,0.7) !important;
+  border-color:rgba(17,17,17,0.15);
+}
+.art-link-fav{
+  width:20px;height:20px;border-radius:5px;
+  background:rgba(17,17,17,0.06);
+  flex-shrink:0;
+  object-fit:cover;
+}
+
+/* ═══ KEYWORD PILLS — topic chips bridging Detail → Search ═══ */
+.art-pills{
+  display:flex;gap:6px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  margin:-4px -24px 22px;
+  padding:0 24px 4px;
+  -webkit-mask-image:linear-gradient(to right, black calc(100% - 28px), transparent);
+  mask-image:linear-gradient(to right, black calc(100% - 28px), transparent);
+}
+.art-pills::-webkit-scrollbar{display:none}
+.art-pill{
+  flex-shrink:0;
+  display:inline-flex;align-items:center;gap:3px;
+  padding:5px 12px 5px 10px;
+  border-radius:9999px;
+  background:transparent;
+  border:1px solid rgba(17,17,17,0.16);
+  color:var(--text);
+  font-family:'Outfit',sans-serif;
+  font-size:11px;font-weight:600;
+  cursor:pointer;
+  transition:all .2s var(--ease-quintic);
+  letter-spacing:0.01em;
+  white-space:nowrap;
+}
+.art-pill::before{
+  content:'#';
+  color:var(--text2);
+  font-weight:500;
+  font-size:12px;
+}
+.art-pill:hover{
+  background:rgba(17,17,17,0.06);
+  border-color:rgba(17,17,17,0.32);
+  transform:translateY(-1px);
+  color:var(--black);
+}
+.art-pill:hover::before{color:#F59E0B}
+.art-pill:active{transform:translateY(0)}
+
+/* ═══ BREADCRUMB LADDER — track navigation history through Story Echoes ═══ */
+.art-breadcrumb{
+  padding:2px 24px 10px;
+  animation:breadcrumbIn .35s var(--ease-quintic);
+}
+.art-breadcrumb-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px 6px 9px;
+  background:rgba(17,17,17,0.05);
+  border:1px solid rgba(17,17,17,0.09);
+  border-radius:9999px;
+  font-family:'Outfit',sans-serif;
+  font-size:11px;font-weight:500;
+  cursor:pointer;
+  max-width:100%;min-width:0;
+  transition:all .2s var(--ease-quintic);
+}
+.art-breadcrumb-btn:hover{
+  background:rgba(17,17,17,0.09);
+  transform:translateX(-2px);
+}
+.art-breadcrumb-btn svg{width:13px;height:13px;flex-shrink:0;color:var(--text2)}
+.art-breadcrumb-label{
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  font-weight:600;
+  flex-shrink:0;
+}
+.art-breadcrumb-title{
+  color:var(--text);
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+  max-width:220px;
+}
+.art-breadcrumb-depth{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 5px;
+  font-size:9px;font-weight:700;
+  background:rgba(245,158,11,0.18);
+  color:#92400E;
+  border-radius:9999px;
+  margin-left:4px;
+}
+@keyframes breadcrumbIn{
+  from{opacity:0;transform:translateY(-6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ═══ STORY ECHOES — thematic sibling strip at the bottom of detail view ═══ */
+.echoes-section{
+  margin:32px -24px 16px;        /* bleed to card edge so strip can scroll full-width */
+  padding:24px 24px 8px;
+  border-top:1px solid rgba(17,17,17,0.08);
+}
+.echoes-label{
+  font-size:11px;font-weight:700;
+  color:var(--text2);
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.echoes-label::before{
+  content:'◈';font-size:12px;color:#F59E0B;
+}
+.echoes-strip{
+  display:flex;gap:12px;
+  overflow-x:auto;
+  padding-bottom:8px;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right, black calc(100% - 24px), transparent);
+  mask-image:linear-gradient(to right, black calc(100% - 24px), transparent);
+}
+.echoes-strip::-webkit-scrollbar{display:none}
+.echo-card{
+  flex:0 0 190px;
+  padding:14px 14px 12px;
+  background:rgba(17,17,17,0.04);
+  border:1px solid rgba(17,17,17,0.08);
+  border-radius:14px;
+  cursor:pointer;
+  scroll-snap-align:start;
+  transition:all .25s var(--ease-quintic);
+  display:flex;flex-direction:column;
+}
+.echo-card:hover{
+  background:rgba(17,17,17,0.07);
+  border-color:rgba(17,17,17,0.16);
+  transform:translateY(-2px);
+}
+.echo-card:active{transform:translateY(0)}
+.echo-meta{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;color:var(--text2);
+  margin-bottom:8px;letter-spacing:0.02em;
+}
+.echo-meta .fav-icon{width:12px;height:12px}
+.echo-title{
+  font-size:13px;font-weight:700;
+  color:var(--black);line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;
+  margin-bottom:10px;
+  flex:1;
+}
+.echo-spark{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;color:#B45309;font-weight:700;
+  padding:3px 8px;border-radius:9999px;
+  background:rgba(245,158,11,0.14);
+  border:1px solid rgba(245,158,11,0.22);
+  width:fit-content;
+  letter-spacing:0.02em;
+}
+.echo-spark svg{width:9px;height:9px;fill:#B45309}
+
+/* ═══ KNOWLEDGE GRAPH VIEW ═══ */
+.view-graph{display:none;flex-direction:column;flex:1;overflow:hidden;padding:16px 0 0}
+.graph-header{padding:0 20px 8px;display:flex;justify-content:space-between;align-items:flex-start}
+.graph-title{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:26px;font-weight:800;
+  color:var(--page-text);letter-spacing:-0.5px;
+}
+.graph-sub{font-size:11px;color:var(--page-text3);margin-top:4px;letter-spacing:0.04em}
+#graph-canvas{flex:1;width:100%}
+.graph-legend{
+  padding:6px 20px 12px;display:flex;gap:14px;
+  font-size:10px;color:var(--page-text3);letter-spacing:0.04em;
+}
+.graph-legend span::before{
+  content:'';display:inline-block;width:8px;height:8px;
+  border-radius:50%;margin-right:5px;vertical-align:middle;
+}
+.graph-legend .gl-node::before{background:rgba(255,255,255,0.4)}
+.graph-legend .gl-hover::before{background:#F59E0B}
+.graph-legend .gl-edge::before{background:rgba(245,158,11,0.5);border-radius:1px;height:2px;width:14px}
+
+/* "Read original" floating button — sticky at bottom of detail */
+.read-orig-wrap{
+  position:sticky;bottom:16px;left:0;right:0;
+  display:flex;justify-content:center;
+  margin-top:32px;pointer-events:none;
+}
+.read-orig-btn{
+  pointer-events:auto;
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 28px;
+  background:rgba(17,17,17,0.92);
+  color:var(--white);
+  font-family:'Outfit',sans-serif;
+  font-size:14px;font-weight:600;
+  border:none;border-radius:9999px;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  cursor:pointer;text-decoration:none;
+  box-shadow:0 10px 40px -8px rgba(0,0,0,0.4);
+  transition:transform .2s,box-shadow .2s;
+}
+.read-orig-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 48px -8px rgba(0,0,0,0.5);
+}
+.read-orig-btn svg{width:16px;height:16px}
+
+/* ═══ ZEN READING MODE — Aa toggle cycles through 3 font scales ═══ */
+.zen-btn{
+  background:none;border:none;cursor:pointer;
+  font-family:'Fraunces',Georgia,serif;
+  font-size:16px;font-weight:700;
+  color:var(--text2);
+  padding:4px 6px;border-radius:6px;
+  transition:all .2s var(--ease-quintic);
+  letter-spacing:-0.02em;
+}
+.zen-btn:hover{color:var(--text);background:rgba(17,17,17,0.06)}
+.zen-btn.active{color:#B45309;background:rgba(245,158,11,0.12)}
+.art-text{transition:font-size .3s var(--ease-quintic),line-height .3s var(--ease-quintic)}
+.art-text.zen-md p{font-size:18px !important;line-height:1.82}
+.art-text.zen-md p:first-child::first-letter{font-size:2.8em}
+.art-text.zen-lg p{font-size:20px !important;line-height:1.88}
+.art-text.zen-lg p:first-child::first-letter{font-size:2.6em}
+
+/* Lead paragraph — first paragraph of detail gets larger font and Drop Cap */
+.art-text{
+  font-size:16px !important;
+  line-height:1.75;
+}
+.art-text p:first-child::first-letter{
+  font-size:3em;
+  font-weight:800;
+  float:left;
+  line-height:0.9;
+  padding:4px 10px 0 0;
+  font-family:'Fraunces',Georgia,serif;
+  color:var(--black);
+}
+
+/* Empty / Loading states */
+.state-msg{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+.state-msg p{color:var(--page-text3);font-size:15px;line-height:1.6;text-align:center}
+.state-btn{
+  font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;
+  padding:10px 24px;border-radius:9999px;border:none;cursor:pointer;
+  background:rgba(255,255,255,0.1);color:var(--page-text);
+  transition:background .2s;
+}
+.state-btn:hover{background:rgba(255,255,255,0.15)}
+
+/* Swipe hint */
+.swipe-hint{
+  text-align:center;padding:4px 0;
+  color:var(--page-text3);font-size:11px;
+  animation:hintFade 4s ease-in-out forwards;
+}
+@keyframes hintFade{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+
+/* ═══ SAVED VIEW — Bento-lite list for quick scanning ═══ */
+.view-saved{display:none;flex:1;overflow-y:auto;padding:16px 20px 110px}
+.view-saved::-webkit-scrollbar{display:none}
+.saved-h{
+  font-size:28px;font-weight:800;letter-spacing:-0.5px;
+  margin:4px 0 4px;color:var(--page-text);
+  font-family:'Fraunces',Georgia,serif;
+}
+.saved-sub{
+  font-size:12px;color:var(--page-text3);
+  margin-bottom:20px;letter-spacing:0.04em;
+}
+.saved-stack{display:flex;flex-direction:column;gap:12px}
+
+/* Compact list card — 3-4 per screen */
+.scard{
+  padding:16px 18px;border-radius:18px;
+  cursor:pointer;position:relative;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  transition:background .2s,border-color .2s,transform .2s var(--ease-quintic);
+}
+.scard:hover{
+  background:rgba(255,255,255,0.07);
+  border-color:rgba(255,255,255,0.14);
+}
+.scard:active{transform:scale(0.985)}
+.scard-meta{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--page-text3);
+  margin-bottom:8px;letter-spacing:0.02em;
+}
+.scard-meta .fav-icon{background:rgba(255,255,255,0.1)}
+.scard-meta .dot{background:rgba(255,255,255,0.2)}
+.scard-t{
+  font-size:16px;font-weight:700;line-height:1.3;
+  color:var(--page-text);margin-bottom:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.scard-s{
+  font-size:13px;color:var(--page-text2);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;margin-bottom:10px;
+}
+.scard-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-top:2px;
+}
+.scard-cat{
+  font-size:10px;font-weight:600;
+  color:var(--page-text3);
+  text-transform:uppercase;letter-spacing:0.1em;
+  padding:4px 10px;border-radius:9999px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+}
+.scard-unsave{
+  background:none;border:none;cursor:pointer;
+  color:#F59E0B;padding:2px;
+  display:flex;align-items:center;justify-content:center;
+}
+.scard-unsave svg{width:16px;height:16px;fill:#F59E0B;stroke:#F59E0B}
+
+/* Export button */
+.saved-header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+}
+.export-btn{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.18);
+  color:var(--page-text2);
+  padding:6px 14px;border-radius:9999px;
+  font-family:'Outfit',sans-serif;
+  font-size:11px;font-weight:600;
+  letter-spacing:0.08em;
+  cursor:pointer;
+  transition:all .2s var(--ease-quintic);
+  display:flex;align-items:center;gap:5px;
+  white-space:nowrap;
+  margin-top:8px;
+}
+.export-btn:hover{
+  background:rgba(255,255,255,0.08);
+  border-color:rgba(245,158,11,0.4);
+  color:var(--page-text);
+}
+.export-btn:active{transform:scale(0.96)}
+.export-btn svg{width:14px;height:14px}
+
+/* Empty state */
+.saved-empty{
+  padding:60px 20px;text-align:center;
+  color:var(--page-text3);
+}
+.saved-empty-big{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:48px;color:var(--page-text3);
+  margin-bottom:12px;opacity:0.4;
+}
+.saved-empty-msg{font-size:14px;line-height:1.6}
+
+/* ═══ ARTICLE DETAIL (card modal) ═══ */
+.art-overlay{
+  position:fixed;inset:0;z-index:190;
+  background:rgba(0,0,0,0);
+  pointer-events:none;
+  transition:background .35s;
+}
+.art-overlay.open{background:rgba(0,0,0,0.55);pointer-events:auto}
+
+.article{
+  position:fixed;
+  top:40px;bottom:20px;left:16px;right:16px;
+  max-width:398px;margin:0 auto;
+  z-index:200;
+  border-radius:28px;
+  overflow:hidden;
+  transform:translateY(110vh);
+  transition:transform .4s cubic-bezier(.22,1,.36,1);
+}
+.article.open{transform:translateY(0)}
+.article-scroll{
+  height:100%;overflow-y:auto;
+  border-radius:28px;
+}
+.article-scroll::-webkit-scrollbar{display:none}
+.article-inner{min-height:100%;padding:0 0 32px;color:var(--black)}
+
+.art-top{
+  position:sticky;top:0;z-index:5;
+  padding:14px 20px;display:flex;justify-content:space-between;align-items:center;
+}
+.art-back{
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(17,17,17,0.06);border:none;
+  cursor:pointer;color:var(--black);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.art-back:hover{background:rgba(17,17,17,0.1)}
+.art-acts{display:flex;gap:6px}
+.art-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);transition:all .15s;
+}
+.art-icon:hover{color:var(--black)}
+.art-icon.on{color:#F59E0B}
+.art-icon.on svg{fill:#F59E0B;stroke:#F59E0B}
+
+.art-body{padding:4px 24px}
+.art-cat{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-bottom:12px}
+.art-title{font-size:26px;font-weight:800;line-height:1.18;letter-spacing:-0.02em;margin-bottom:16px}
+.art-info{font-size:12px;color:var(--text2);margin-bottom:12px}
+.art-source{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.art-sname{font-size:14px;font-weight:600}
+.follow{
+  background:var(--black);color:var(--white);border:none;
+  font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;
+  padding:6px 16px;border-radius:9999px;cursor:pointer;
+  transition:opacity .15s;
+}
+.follow:hover{opacity:0.8}
+.follow.following{background:rgba(17,17,17,0.1);color:var(--black)}
+.art-text{font-size:15px;line-height:1.75;color:var(--text-body);margin-bottom:24px}
+.art-text p{margin-bottom:14px}
+.art-text p:last-child{margin-bottom:0}
+.art-divider{height:1px;background:rgba(17,17,17,0.08);margin-bottom:16px}
+.art-links-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);margin-bottom:12px}
+.art-link{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;margin-bottom:8px;
+  background:rgba(17,17,17,0.03);border-radius:14px;
+  text-decoration:none;color:var(--text);
+  font-size:14px;font-weight:500;
+  transition:background .15s;
+}
+.art-link:hover{background:rgba(17,17,17,0.06)}
+.art-link svg{flex-shrink:0;color:var(--text2)}
+.art-link-url{font-size:11px;color:var(--text2);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--black);color:var(--white);
+  padding:10px 20px;border-radius:12px;font-size:13px;font-weight:500;
+  opacity:0;transition:all .3s;z-index:999;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ═══ BOTTOM NAV ═══ */
+.nav{
+  position:fixed;
+  bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:300;
+  display:flex;align-items:center;gap:4px;
+  padding:8px 12px;
+  background:rgba(20,20,20,0.94);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:9999px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.03);
+}
+.nav-btn{
+  width:48px;height:48px;border-radius:50%;
+  background:none;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,0.3);
+  transition:all .2s;position:relative;
+}
+.nav-btn.on{color:#FFFFFF}
+.nav-btn.on::after{
+  content:'';position:absolute;bottom:6px;
+  width:4px;height:4px;border-radius:50%;
+  background:#F59E0B;
+}
+.nav-btn:active{transform:scale(0.9)}
+
+/* ═══ LOADING ═══ */
+.loading{
+  position:absolute;inset:0;z-index:500;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+  background:var(--page-bg);transition:opacity .3s;
+}
+.loading.hide{opacity:0;pointer-events:none}
+.loading-dots{display:flex;gap:6px}
+.loading-dots span{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  animation:ldot 1.2s ease-in-out infinite;
+}
+.loading-dots span:nth-child(2){animation-delay:.15s}
+.loading-dots span:nth-child(3){animation-delay:.3s}
+@keyframes ldot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+.loading-text{font-size:14px;color:var(--page-text3)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div class="loading-text" id="loading-text">Loading stories...</div>
+  </div>
+
+  <!-- Header -->
+  <div class="header" id="header">
+    <div class="header-row">
+      <div class="logo"><span class="logo-icon">◧</span>Node</div>
+    </div>
+    <div class="cat-pills" id="cat-pills"></div>
+    <div class="time-pills" id="time-pills"></div>
+    <div class="search-bar" id="search-bar">
+      <div class="search-input-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="search-input" type="text" placeholder="Search headline, summary, full text..." oninput="onSearch(this.value)" onkeydown="if(event.key==='Enter')onSearchEnter()">
+        <button class="search-close" onclick="toggleSearch(false)">&times;</button>
+      </div>
+      <div id="search-panel"></div>
+    </div>
+  </div>
+
+  <!-- Feed: Card Stack -->
+  <div class="stack-area" id="body-feed">
+    <canvas class="ripple-canvas" id="ripple-canvas"></canvas>
+    <div class="stack" id="stack"></div>
+    <div class="stack-counter" id="stack-counter">
+      <span id="prog-cur">01</span>
+      <input type="range" id="stack-slider" min="0" max="0" value="0">
+      <span id="prog-total">01</span>
+    </div>
+  </div>
+
+  <!-- Saved View -->
+  <div class="view-saved" id="body-saved">
+    <div class="saved-header">
+      <div>
+        <div class="saved-h">Saved</div>
+        <div class="saved-sub" id="saved-sub"></div>
+      </div>
+      <button class="export-btn" onclick="exportBriefing()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        EXPORT .MD
+      </button>
+    </div>
+    <div class="saved-stack" id="saved-stack"></div>
+  </div>
+
+  <!-- Knowledge Graph View -->
+  <div class="view-graph" id="body-graph">
+    <div class="graph-header">
+      <div>
+        <div class="graph-title">Intelligence Map</div>
+        <div class="graph-sub" id="graph-sub"></div>
+      </div>
+    </div>
+    <div class="graph-legend">
+      <span class="gl-node">Entity</span>
+      <span class="gl-hover">Highlighted</span>
+      <span class="gl-edge">Co-occurrence</span>
+    </div>
+    <canvas id="graph-canvas"></canvas>
+  </div>
+
+  <!-- Overlay behind article -->
+  <div class="art-overlay" id="art-overlay" onclick="closeArt()"></div>
+
+  <!-- Article Detail (card modal) -->
+  <div class="article" id="article">
+    <div class="article-scroll" id="art-scroll">
+      <div class="article-inner" id="art-inner">
+        <div class="art-top" id="art-top">
+          <button class="art-back" onclick="closeArt()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </button>
+          <div class="art-acts">
+            <button class="zen-btn" id="zen-toggle" onclick="toggleZenMode()" title="Reading size">Aa</button>
+            <button class="art-icon" id="art-bk" onclick="toggleStar()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>
+            <button class="art-icon" onclick="copyArt()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="art-breadcrumb" id="art-breadcrumb" style="display:none"></div>
+        <div class="art-body" id="art-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied</div>
+
+  <!-- Bottom Nav -->
+  <div class="nav" id="nav">
+    <button class="nav-btn on" id="pn-feed" onclick="go('feed')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </button>
+    <button class="nav-btn" id="pn-search" onclick="toggleSearch()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </button>
+    <button class="nav-btn" id="pn-graph" onclick="go('graph')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="18" r="2"/>
+        <line x1="7.5" y1="7.5" x2="11" y2="16.5"/><line x1="16.5" y1="9.5" x2="13" y2="16.5"/><line x1="8" y1="6.5" x2="16" y2="7.5"/>
+      </svg>
+    </button>
+    <button class="nav-btn" id="pn-saved" onclick="go('saved')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+/* ═══ RIPPLE PAINTER — Morandi baseline + fluid distortion on swipe ═══ */
+const Ripple=(()=>{
+  // Toggle for debug hooks (_tick frame driver). Flip to false for shipped builds.
+  const DEBUG=true;
+  const cvs=document.getElementById('ripple-canvas');
+  const ctx=cvs.getContext('2d');
+  let W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+  // Morandi palette — dusty, desaturated, soft
+  const BLOBS=[
+    {rx:0.22,ry:0.28,r:0.55,color:'#8B9AA8'},
+    {rx:0.78,ry:0.18,r:0.45,color:'#B8A99A'},
+    {rx:0.15,ry:0.78,r:0.60,color:'#9AA89B'},
+    {rx:0.85,ry:0.72,r:0.50,color:'#B5A5B0'},
+    {rx:0.55,ry:0.50,r:0.40,color:'#A8A29C'},
+  ];
+  const ripples=[];
+  let lastSpawn=0;
+
+  function resize(){
+    const rect=cvs.getBoundingClientRect();
+    W=rect.width;H=rect.height;
+    cvs.width=W*dpr;cvs.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function drawBaseline(){
+    ctx.clearRect(0,0,W,H);
+    for(const b of BLOBS){
+      const cx=b.rx*W,cy=b.ry*H,rad=b.r*Math.min(W,H);
+      const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+      g.addColorStop(0,b.color+'55');
+      g.addColorStop(0.5,b.color+'1e');
+      g.addColorStop(1,b.color+'00');
+      ctx.fillStyle=g;
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function drawRipple(r,age){
+    const t=age/r.life;
+    if(!(t>=0&&t<1))return;                    // guard NaN / out-of-range
+    const eased=1-Math.pow(1-t,5);             // Quintic Out — matches --ease-quintic
+    const radius=r.startR+(r.maxR-r.startR)*eased;
+    if(!(radius>0.5))return;                   // createRadialGradient rejects r1≤0 in some engines
+    const alpha=r.strength*(1-t)*(1-t);        // quadratic fade — lingers, then vanishes
+    const coreAlpha=alpha;                     // full strength — the incandescent nucleus
+    const bloomAlpha=alpha*0.75;               // outer halo at 75% core intensity
+
+    // Elongation — stretch along velocity vector, creating motion-blur-like streak
+    const speed=Math.sqrt(r.vx*r.vx+r.vy*r.vy);
+    const stretch=1+Math.min(speed*0.3,0.8);   // 1.0 → 1.8 at peak velocity
+    const angle=Math.atan2(r.vy,r.vx);
+
+    ctx.save();
+    ctx.globalCompositeOperation='screen';
+    ctx.translate(r.x,r.y);
+    ctx.rotate(angle);
+    ctx.scale(stretch,1);                      // deform coord system: radial gradient becomes truly elliptical
+
+    // Outer bloom — inherits card tint (ambient sync)
+    const bloomGrad=ctx.createRadialGradient(0,0,0,0,0,radius);
+    bloomGrad.addColorStop(0,   `rgba(${r.hue},${bloomAlpha})`);
+    bloomGrad.addColorStop(0.4, `rgba(${r.hue},${bloomAlpha*0.55})`);
+    bloomGrad.addColorStop(1,   `rgba(${r.hue},0)`);
+    ctx.fillStyle=bloomGrad;
+    ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fill();
+
+    // Hot white core — incandescent nucleus, smaller + tighter
+    const coreR=radius*0.55;
+    const coreGrad=ctx.createRadialGradient(0,0,0,0,0,coreR);
+    coreGrad.addColorStop(0,   `rgba(255,255,255,${coreAlpha})`);
+    coreGrad.addColorStop(0.3, `rgba(255,255,255,${coreAlpha*0.6})`);
+    coreGrad.addColorStop(1,   `rgba(255,255,255,0)`);
+    ctx.fillStyle=coreGrad;
+    ctx.beginPath();ctx.arc(0,0,coreR,0,Math.PI*2);ctx.fill();
+
+    ctx.restore();
+  }
+
+  function frame(now){
+    drawBaseline();
+    for(let i=ripples.length-1;i>=0;i--){
+      const r=ripples[i];
+      const age=now-r.born;
+      if(age>=r.life){ripples.splice(i,1);continue}
+      drawRipple(r,age);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Card-tint palette — ambient sync: the ripple inherits the active card's RGB
+  const THEME_RGB={
+    'c-cream':'255,242,197',  // #FFF2C5
+    'c-peach':'255,232,229',  // #FFE8E5
+    'c-ice':  '224,241,255',  // #E0F1FF
+  };
+
+  /**
+   * Energy-Sensing Ripple — hybrid tracking, velocity-driven, ambient-synced.
+   * Stores full velocity vector on each ripple so drawRipple can elongate
+   * along the direction of motion.
+   */
+  function spawnRipple(x,y,vx,vy,now,cardTheme){
+    // Throttle — one spawn per ~80ms keeps the trail legible, not soup
+    if(now-lastSpawn<80)return;
+    // Velocity floor — micro-movements leave the Morandi baseline still
+    const speed=Math.sqrt(vx*vx+vy*vy);
+    if(speed<0.1)return;
+    lastSpawn=now;
+
+    const hue=THEME_RGB[cardTheme]||THEME_RGB['c-ice'];
+
+    // Energy mapping: faster drag → larger, brighter, shorter-lived
+    const maxR    =50+Math.min(speed*120,250);
+    const life    =Math.max(800-speed*200,400);
+    const strength=0.25+Math.min(speed*0.35,0.55);  // peak 0.8 at fast velocity (was 0.4)
+
+    ripples.push({x,y,vx,vy,born:now,life,startR:0,maxR,strength,hue});
+  }
+
+  function onDrag(x,y,vx,vy,theme){
+    spawnRipple(x,y,vx,vy,performance.now(),theme);
+  }
+
+  resize();
+  window.addEventListener('resize',resize);
+  requestAnimationFrame(frame);
+  const api={onDrag,resize,_ripples:ripples};
+  if(DEBUG)api._tick=()=>frame(performance.now());
+  return api;
+})();
+
+/* ═══ STATE ═══ */
+let ALL=[],CATS=[],TODAY='',CAT_MAP={};
+let filter={cat:'all',period:'day'};
+let stackIdx=0,cur=null,view='feed',searchQ='';
+let timelineFilter=null;  // null or "YYYY-MM-DD" — set when user clicks a sparkline bar
+const rs=new Set(JSON.parse(localStorage.getItem('ai_read')||'[]'));
+const fs=new Set(JSON.parse(localStorage.getItem('ai_fav')||'[]'));
+const CNAMES=['c-cream','c-peach','c-ice'];
+const CBGS=['#FFF2C5','#FFE8E5','#E0F1FF'];
+
+/* Deep Morandi palette — contrast-first pairs so the thumbnail never merges
+   with the cream/peach/ice card background. Each pair is drawn from saturated
+   jewel tones dimmed just enough to stay editorial, not cartoonish. */
+const MORANDI_PAIRS=[
+  ['#4F5D75','#2D3142'],  // deep gunmetal + navy
+  ['#E5989B','#B5838D'],  // dusty rose + dried rose
+  ['#6B9080','#3A5A40'],  // forest green + moss
+  ['#5C4D7D','#35224A'],  // royal purple + eggplant
+  ['#C27A7E','#8C4A4E'],  // brick + rust red
+  ['#2C4858','#8E9AAF'],  // deep teal + dusty blue
+  ['#6A4A3C','#C28B6A'],  // chocolate + tan
+  ['#3D405B','#81B29A'],  // indigo + sage
+];
+/* Seeded hash → deterministic color pair per story */
+function seedHash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return Math.abs(h)}
+function thumbColors(story){
+  const seed=seedHash((story.headline||'')+(story.id||''));
+  return MORANDI_PAIRS[seed%MORANDI_PAIRS.length];
+}
+
+/* Extract domain from URL for favicon + reading time estimate */
+function domainOf(url){try{return new URL(url).hostname.replace(/^www\./,'')}catch{return ''}}
+function faviconUrl(url){const d=domainOf(url);return d?`https://www.google.com/s2/favicons?domain=${d}&sz=64`:''}
+function readTime(text){const words=(text||'').split(/\s+/).filter(Boolean).length;return Math.max(1,Math.ceil(words/200))}
+/* Extract a short one-liner hook from a summary (first sentence, capped) */
+function oneLiner(text,maxLen=140){
+  if(!text)return '';
+  const first=text.split(/(?<=[.!?])\s+/)[0]||text;
+  return first.length>maxLen?first.substring(0,maxLen).replace(/\s+\S*$/,'')+'…':first;
+}
+
+const $=id=>document.getElementById(id);
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function isT(d){return d===TODAY}
+function isW(d){const x=(new Date(TODAY)-new Date(d))/864e5;return x>=0&&x<7}
+function isM(d){return d&&TODAY&&d.substring(0,7)===TODAY.substring(0,7)}
+function isY(d){return d&&TODAY&&d.substring(0,4)===TODAY.substring(0,4)}
+
+/* Highlight matches of q inside text as <mark> — works on already-escaped output.
+   q is escaped for regex metachars; HTML-escape is applied to text before substitution. */
+function hi(text,q){
+  const escaped=esc(text||'');
+  if(!q||!text)return escaped;
+  const reSafe=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  try{
+    const re=new RegExp('('+reSafe+')','gi');
+    return escaped.replace(re,'<mark>$1</mark>');
+  }catch{return escaped}
+}
+
+/* Search scoring — weighted hit across headline / summary / full_text / snippet */
+function scoreStory(x,q){
+  let score=0;
+  const hl=(x.headline||'').toLowerCase();
+  const sm=(x.summary||'').toLowerCase();
+  if(hl.includes(q))score+=10;
+  if(sm.includes(q))score+=3;
+  let ftHit=false,snipHit=false;
+  for(const a of (x.articles||[])){
+    if(!ftHit&&(a.full_text||'').toLowerCase().includes(q)){score+=5;ftHit=true}
+    if(!snipHit&&(a.content_snippet||'').toLowerCase().includes(q)){score+=2;snipHit=true}
+  }
+  if(score===0)return 0;
+  // Freshness bonus
+  if(isT(x.date))score+=3;
+  else if(isW(x.date))score+=1;
+  // Cross-newsletter coverage bonus (up to +2)
+  score+=Math.min(2,Math.max(0,((x.articles||[]).length)-1));
+  return score;
+}
+
+function flt(){
+  let s=ALL;
+  if(filter.cat!=='all')s=s.filter(x=>x.category===filter.cat);
+  // When searching: bypass period filter so results span all time, ranked by relevance
+  if(!searchQ){
+    if(filter.period==='day')s=s.filter(x=>isT(x.date));
+    else if(filter.period==='week')s=s.filter(x=>isW(x.date));
+    else if(filter.period==='month')s=s.filter(x=>isM(x.date));
+    else if(filter.period==='year')s=s.filter(x=>isY(x.date));
+  }
+  if(searchQ){
+    const q=searchQ.toLowerCase().trim();
+    if(!q)return s;
+    const aff=getAffinity();
+    const hasAff=Object.keys(aff).length>0;
+    const scored=[];
+    for(const x of s){
+      let sc=scoreStory(x,q);
+      if(sc<=0)continue;
+      // Affinity boost in search: user's interests rank higher
+      if(hasAff)sc+=Math.min(4,affinityScore(x,aff)*0.5);
+      scored.push([sc,x]);
+    }
+    scored.sort((a,b)=>b[0]-a[0]);
+    let results=scored.map(p=>p[1]);
+    if(timelineFilter)results=results.filter(x=>x.date===timelineFilter);
+    return results;
+  }
+  // Feed: apply affinity sort within each date group (preserves chronological primary order)
+  const aff=getAffinity();
+  if(Object.keys(aff).length>0){
+    s=[...s].sort((a,b)=>{
+      const dateCmp=(b.date||'').localeCompare(a.date||'');
+      if(dateCmp!==0)return dateCmp;
+      return affinityScore(b,aff)-affinityScore(a,aff);
+    });
+  }
+  return s;
+}
+
+/* ═══ STORY ECHOES — thematic relatedness scoring ═══
+   Picks proper nouns from the current story and ranks every other story
+   by keyword overlap + freshness + category + own cross-coverage. */
+const ECHO_STOP=new Set([
+  'the','this','that','with','from','have','has','had','was','were','been',
+  'will','would','could','should','may','might','new','most','more','less',
+  'all','any','some','its','their','there','here','today','now','just',
+  'about','into','over','under','after','before','first','last','next',
+  'ai','api','app','why','how','what','who','when','where','they','them',
+  'models','model','launch','launches','launched','announce','announces','announced',
+  'release','releases','released','update','updates','updated','also','than','then',
+  // Generic product-tier words — capitalized but not distinctive
+  'pro','plus','max','mini','lite','beta','alpha','free','basic','standard','premium',
+]);
+function extractKeywords(story){
+  const text=((story.headline||'')+' '+(story.summary||''));
+  const words=text.match(/\b[A-Z][A-Za-z0-9\-'\.]{2,}\b/g)||[];
+  const seen=new Set(),kws=[];
+  for(const w of words){
+    const lo=w.toLowerCase();
+    if(ECHO_STOP.has(lo))continue;
+    if(seen.has(lo))continue;
+    seen.add(lo);
+    kws.push(w);
+    if(kws.length>=8)break;
+  }
+  return kws;
+}
+function scoreEcho(current,candidate,keywords){
+  if(current.id===candidate.id)return[0,[]];
+  const text=((candidate.headline||'')+' '+(candidate.summary||'')).toLowerCase();
+  const matched=[];
+  for(const kw of keywords){
+    // Word-boundary match kills substring false positives ("mfu" inside other words)
+    const lo=kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re=new RegExp('\\b'+lo+'\\b');
+    if(re.test(text))matched.push(kw);
+  }
+  if(matched.length===0)return[0,[]];
+  let score=matched.length*5;                               // keyword overlap
+  if(current.category===candidate.category)score+=2;        // same category
+  const dayDiff=Math.abs((new Date(current.date)-new Date(candidate.date))/864e5);
+  if(dayDiff<=3)score+=3;else if(dayDiff<=7)score+=1;       // freshness proximity
+  score+=Math.min(2,Math.max(0,((candidate.articles||[]).length)-1));  // candidate own coverage
+  return[score,matched];
+}
+const ECHO_MIN_SCORE=10;   // below this, the match is just noise
+function findEchoes(story,max=6){
+  const keywords=extractKeywords(story);
+  if(!keywords.length)return[];
+  const scored=[];
+  for(const candidate of ALL){
+    const [s,m]=scoreEcho(story,candidate,keywords);
+    if(s>=ECHO_MIN_SCORE)scored.push({story:candidate,score:s,matched:m});
+  }
+  scored.sort((a,b)=>b.score-a.score);
+  return scored.slice(0,max);
+}
+
+/* ═══ CROSS-SOURCE TIMELINE — daily story counts as a 30-day bar sparkline ═══ */
+function buildTimelineData(stories,days=30){
+  const counts={};
+  for(const s of stories){
+    if(s.date)counts[s.date]=(counts[s.date]||0)+1;
+  }
+  // Walk backward from TODAY, padding zeros for empty days
+  const result=[];
+  const today=new Date(TODAY+'T00:00:00Z');
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today);
+    d.setUTCDate(d.getUTCDate()-i);
+    const iso=d.toISOString().slice(0,10);
+    result.push(counts[iso]||0);
+  }
+  return result;
+}
+
+function renderSparkline(canvasId,dailyCounts,selIdx){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  if(rect.width===0||rect.height===0)return;
+  canvas.width=rect.width*dpr;
+  canvas.height=rect.height*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,rect.width,rect.height);
+  const maxCount=Math.max(...dailyCounts,1);
+  const barWidth=rect.width/dailyCounts.length;
+  const gap=1;
+  // Baseline
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  ctx.fillRect(0,rect.height-1,rect.width,1);
+  // Bars — selected bar glows white; today bar slightly brighter; rest = amber
+  dailyCounts.forEach((count,i)=>{
+    if(count===0)return;
+    const barHeight=Math.max(1,(count/maxCount)*(rect.height-1));
+    const x=i*barWidth;
+    const y=rect.height-barHeight;
+    if(i===selIdx){
+      ctx.fillStyle='rgba(255,255,255,0.95)';                  // SELECTED — white glow
+    }else if(selIdx>=0){
+      ctx.fillStyle='rgba(245,158,11,0.30)';                   // dimmed when something is selected
+    }else if(i===dailyCounts.length-1){
+      ctx.fillStyle='rgba(252,211,77,0.95)';                   // today marker
+    }else{
+      ctx.fillStyle='rgba(245,158,11,0.78)';                   // normal
+    }
+    ctx.fillRect(x,y,Math.max(1,barWidth-gap),barHeight);
+  });
+  // Store barWidth on the canvas element for hit-testing
+  canvas._barWidth=barWidth;
+}
+
+/* ═══ PERSONALIZATION — deterministic affinity matrix from bookmarks + searches ═══ */
+const AFF_KEY='node_affinity';
+function getAffinity(){try{return JSON.parse(localStorage.getItem(AFF_KEY)||'{}')}catch{return{}}}
+function bumpAffinity(story,weight){
+  weight=weight||1;
+  const aff=getAffinity();
+  const kws=extractKeywords(story).map(k=>normKw(k).toLowerCase());
+  for(const kw of kws)aff[kw]=(aff[kw]||0)+weight;
+  // Also bump the category
+  if(story.category)aff['_cat:'+story.category]=(aff['_cat:'+story.category]||0)+weight;
+  localStorage.setItem(AFF_KEY,JSON.stringify(aff));
+}
+function affinityScore(story,aff){
+  const kws=extractKeywords(story).map(k=>normKw(k).toLowerCase());
+  let score=0;
+  for(const kw of kws)score+=(aff[kw]||0);
+  // Category affinity
+  if(story.category)score+=(aff['_cat:'+story.category]||0)*0.5;
+  return score;
+}
+
+/* Search history — persisted in localStorage, max 8 entries */
+const SH_KEY='ai_searches';
+function getSearchHistory(){try{return JSON.parse(localStorage.getItem(SH_KEY)||'[]')}catch{return[]}}
+function saveSearchHistory(q){
+  if(!q||q.length<2)return;
+  let list=getSearchHistory().filter(x=>x.toLowerCase()!==q.toLowerCase());
+  list.unshift(q);
+  list=list.slice(0,8);
+  localStorage.setItem(SH_KEY,JSON.stringify(list));
+  // Affinity: search = weaker signal (+0.5)
+  const aff=getAffinity();
+  const lo=q.toLowerCase().trim();
+  if(lo.length>=3)aff[lo]=(aff[lo]||0)+0.5;
+  localStorage.setItem(AFF_KEY,JSON.stringify(aff));
+}
+function clearSearchHistory(){localStorage.removeItem(SH_KEY);renderSearchPanel()}
+
+function starSvg(filled){
+  return`<svg width="20" height="20" viewBox="0 0 24 24" fill="${filled?'#F59E0B':'none'}" stroke="${filled?'#F59E0B':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+}
+
+/* ═══ RENDER HEADER ═══ */
+function renderHeader(){
+  const cats=[{id:'all',name:'Trending'},...CATS.map(c=>({id:c.id,name:c.name_en}))];
+  $('cat-pills').innerHTML=cats.map(c=>
+    `<button class="cpill ${filter.cat===c.id?'on':''}" onclick="filter.cat='${c.id}';stackIdx=0;render()">${c.name}</button>`
+  ).join('');
+  const periods=[
+    {id:'day',label:'Today'},
+    {id:'week',label:'This Week'},
+    {id:'month',label:'This Month'},
+    {id:'year',label:'This Year'},
+  ];
+  $('time-pills').innerHTML=periods.map(p=>
+    `<button class="tpill ${filter.period===p.id?'on':''}" onclick="filter.period='${p.id}';stackIdx=0;render()">${p.label}</button>`
+  ).join('');
+}
+
+/* ═══ CARD STACK ═══ */
+function renderStack(){
+  const stories=flt();
+  const container=$('stack');
+
+  if(!stories.length){
+    container.innerHTML=`<div class="state-msg">
+      <p>No stories for this filter.</p>
+      <button class="state-btn" onclick="filter.period='week';stackIdx=0;render()">Try This Week</button>
+    </div>`;
+    $('stack-counter').style.display='none';
+    return;
+  }
+
+  if(stackIdx>=stories.length)stackIdx=stories.length-1;
+  if(stackIdx<0)stackIdx=0;
+
+  container.innerHTML='';
+
+  // Behind cards: just colored shapes peeking out at bottom (no content)
+  const behindCount=Math.min(5,stories.length-1-stackIdx);
+  for(let i=behindCount;i>=1;i--){
+    const si=stackIdx+i;
+    const bg=document.createElement('div');
+    bg.className=`stack-bg ${CNAMES[si%3]}`;
+    bg.style.zIndex=10-i;
+    bg.style.top=`${i*8}px`;
+    bg.style.left=`${i*3}px`;
+    bg.style.right=`${i*3}px`;
+    bg.style.bottom=`${-i*7}px`;
+    bg.style.opacity=1-i*0.12;
+    container.appendChild(bg);
+  }
+
+  // Top card with full content
+  const s=stories[stackIdx];
+  const card=document.createElement('div');
+  card.className=`stack-top ${CNAMES[stackIdx%3]}`;
+  card.dataset.idx=stackIdx;
+
+  const ir=rs.has(s.id+'');
+  const ib=fs.has(s.id+'');
+  const firstArt=(s.articles&&s.articles[0])||{};
+  const src=firstArt.source_name||'';
+  const srcUrl=firstArt.url||'';
+  const sc=(s.articles||[]).length;
+  const live=isT(s.date)?'<span class="meta-pill live">● LIVE</span>':'';
+  const readStyle=ir?'opacity:0.55':'';
+  const fav=faviconUrl(srcUrl);
+  const rt=readTime(s.summary);
+  const srcBlock=src
+    ? `<span class="meta-pill">${fav?`<img class="fav-icon" src="${fav}" alt="" onerror="this.style.display='none'">`:''}${esc(src)}</span>`
+    : '';
+
+  card.innerHTML=`
+    <div style="${readStyle};display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="card-meta">
+        ${live}
+        ${srcBlock}
+        <span class="read-time">${rt} min read</span>
+        ${sc>1?`<span class="meta-pill">${sc} sources</span>`:''}
+      </div>
+      <div class="card-h">${hi(s.headline,searchQ)}</div>
+      <div class="card-snippet">${hi(s.summary||'',searchQ)}</div>
+      <div class="card-foot">
+        <span class="card-cat">${(CAT_MAP[s.category]||{}).name_en||s.category}</span>
+        <button class="bk-btn ${ib?'on':''}" data-id="${s.id}" aria-label="Bookmark">${starSvg(ib)}</button>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+
+  // Bookmark button — circular chip at card-foot, with spring pop + glow micro-interaction
+  card.querySelector('.bk-btn').addEventListener('click',e=>{
+    e.stopPropagation();
+    e.preventDefault();
+    const btn=e.currentTarget;
+    // Retrigger the animation reliably even on rapid toggles
+    btn.classList.remove('pulsing');
+    void btn.offsetWidth;       // force reflow
+    btn.classList.add('pulsing');
+    setTimeout(()=>btn.classList.remove('pulsing'),700);
+    toggleFav(s.id);
+  });
+
+  // Tap to open
+  card._wasSwiped=false;
+  card.addEventListener('click',()=>{
+    if(!card._wasSwiped)openArt(stackIdx);
+  });
+
+  // Swipe
+  setupSwipe(card);
+
+  // Slider — update properties in-place (never re-create, or drag breaks mid-swipe)
+  $('stack-counter').style.display='flex';
+  const slider=$('stack-slider');
+  slider.max=Math.max(0,stories.length-1);
+  slider.value=stackIdx;
+  $('prog-cur').textContent=String(stackIdx+1).padStart(2,'0');
+  $('prog-total').textContent=String(stories.length).padStart(2,'0');
+
+  // Swipe hint (first time only)
+  if(!localStorage.getItem('ai_hint')&&stackIdx===0&&stories.length>1){
+    $('stack-counter').insertAdjacentHTML('afterend',
+      '<div class="swipe-hint">Swipe cards to browse</div>');
+    localStorage.setItem('ai_hint','1');
+  }
+}
+
+/* ═══ SWIPE ═══ */
+function setupSwipe(el){
+  let sx=0,sy=0,dx=0,swiping=false,moved=false;
+  let lastT=0,lastX=0,lastY=0,vx=0,vy=0;
+
+  const canvasRect=()=>document.getElementById('ripple-canvas').getBoundingClientRect();
+
+  const onStart=e=>{
+    const t=e.touches?e.touches[0]:e;
+    sx=t.clientX;sy=t.clientY;
+    dx=0;swiping=false;moved=false;
+    lastT=performance.now();lastX=t.clientX;lastY=t.clientY;vx=0;vy=0;
+    el._wasSwiped=false;
+    el.style.transition='none';
+    el.classList.add('swiping');
+    el.classList.remove('flinging');
+  };
+
+  const onMove=e=>{
+    const t=e.touches?e.touches[0]:e;
+    dx=t.clientX-sx;
+    const dy=t.clientY-sy;
+    if(!moved&&(Math.abs(dx)>8||Math.abs(dy)>8))moved=true;
+    if(!swiping&&moved&&Math.abs(dx)>Math.abs(dy)*1.2&&Math.abs(dx)>10){
+      swiping=true;
+    }
+    if(swiping){
+      if(e.cancelable)e.preventDefault();
+      const now=performance.now();
+      const dt=Math.max(1,now-lastT);
+      vx=(t.clientX-lastX)/dt;
+      vy=(t.clientY-lastY)/dt;
+      lastT=now;lastX=t.clientX;lastY=t.clientY;
+
+      const rot=dx*0.05;
+      el.style.transform=`translateX(${dx}px) rotate(${rot}deg)`;
+      el.style.opacity=Math.max(0.4,1-Math.abs(dx)/400);
+
+      // Active card tint — used for both the edge glow AND the ambient ripple hue
+      const theme=el.classList.contains('c-cream')?'c-cream':
+                  el.classList.contains('c-peach')?'c-peach':'c-ice';
+      const glowTint=theme==='c-cream'?'255,230,140':
+                     theme==='c-peach'?'255,180,170':'150,200,255';
+
+      // Edge glow offset — the diffused shadow leans into the drag direction
+      const lean=dx*0.35,leanBlur=Math.min(60,40+Math.abs(dx)*0.25);
+      el.style.boxShadow=
+        `${lean}px 40px 120px -20px rgba(${glowTint},0.45),`+
+        `${lean*0.5}px 12px ${leanBlur}px -8px rgba(${glowTint},0.22),`+
+        `inset 0 1px 0 rgba(255,255,255,0.5)`;
+
+      // Spawn background ripple at the finger point, inheriting card tint + velocity vector
+      const rect=canvasRect();
+      Ripple.onDrag(t.clientX-rect.left,t.clientY-rect.top,vx,vy,theme);
+    }
+  };
+
+  const onEnd=()=>{
+    el.classList.remove('swiping');
+    if(swiping){
+      el._wasSwiped=true;
+      el.style.transition='transform .5s var(--ease-quintic),opacity .5s var(--ease-quintic),box-shadow .5s var(--ease-quintic),filter .35s var(--ease-quintic)';
+      el.style.boxShadow='';
+      const stories=flt();
+      const fast=Math.abs(vx)>0.7;
+      if(fast)el.classList.add('flinging');
+
+      if(dx<-80&&stackIdx<stories.length-1){
+        el.style.transform=`translateX(-500px) rotate(-18deg)`;
+        el.style.opacity='0';
+        setTimeout(()=>{stackIdx++;renderStack()},320);
+      }else if(dx>80&&stackIdx>0){
+        el.style.transform=`translateX(500px) rotate(18deg)`;
+        el.style.opacity='0';
+        setTimeout(()=>{stackIdx--;renderStack()},320);
+      }else{
+        el.style.transform='';
+        el.style.opacity='';
+        setTimeout(()=>el.classList.remove('flinging'),350);
+      }
+    }else if(moved){
+      el._wasSwiped=true;
+      el.style.transform='';
+      el.style.opacity='';
+      el.style.boxShadow='';
+    }else{
+      el.style.transform='';
+      el.style.opacity='';
+      el.style.boxShadow='';
+    }
+  };
+
+  el.addEventListener('touchstart',onStart,{passive:true});
+  el.addEventListener('touchmove',onMove,{passive:false});
+  el.addEventListener('touchend',onEnd);
+  el.addEventListener('mousedown',e=>{
+    e.preventDefault();onStart(e);
+    const mm=e2=>onMove(e2);
+    const mu=()=>{onEnd();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu)};
+    document.addEventListener('mousemove',mm);
+    document.addEventListener('mouseup',mu);
+  });
+}
+
+/* ═══ RENDER ═══ */
+function render(){
+  renderHeader();
+  if(view==='feed')renderStack();
+  if(view==='saved')renderSaved();
+}
+
+/* ═══ SAVED — Bento-lite list view ═══ */
+function renderSaved(){
+  const saved=ALL.filter(s=>fs.has(s.id+''));
+  const el=$('saved-stack');
+  const subEl=$('saved-sub');
+  if(subEl)subEl.textContent=saved.length?`${saved.length} saved ${saved.length===1?'story':'stories'}`:'';
+
+  if(!saved.length){
+    el.innerHTML=`<div class="saved-empty">
+      <div class="saved-empty-big">☆</div>
+      <div class="saved-empty-msg">No saved stories yet.<br>Tap the star on any card to keep it here.</div>
+    </div>`;
+    return;
+  }
+
+  // Sort newest first by id (proxy for insertion order; actual story.date also works)
+  const sorted=[...saved].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+
+  el.innerHTML=sorted.map(s=>{
+    const gi=ALL.indexOf(s);
+    const firstArt=(s.articles||[])[0]||{};
+    const src=firstArt.source_name||'';
+    const fav=faviconUrl(firstArt.url||'');
+    const cat=(CAT_MAP[s.category]||{}).name_en||s.category||'';
+    return`<div class="scard" onclick="openArt(${gi},'saved')" data-id="${s.id}">
+      <div class="scard-meta">
+        ${fav?`<img class="fav-icon" src="${fav}" alt="" onerror="this.style.display='none'">`:''}
+        <span>${esc(src)||'Unknown'}</span>
+        <span class="dot"></span>
+        <span>${s.date}</span>
+      </div>
+      <div class="scard-t">${esc(s.headline)}</div>
+      <div class="scard-s">${esc(s.summary||'')}</div>
+      <div class="scard-foot">
+        <span class="scard-cat">${esc(cat)}</span>
+        <button class="scard-unsave" data-id="${s.id}" onclick="event.stopPropagation();toggleFav(${s.id})" aria-label="Unsave">${starSvg(true)}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ ZEN READING MODE ═══ */
+let zenLevel=parseInt(localStorage.getItem('node_zen')||'0');
+function applyZenMode(){
+  const el=document.querySelector('.art-text');
+  if(!el)return;
+  el.classList.remove('zen-md','zen-lg');
+  if(zenLevel===1)el.classList.add('zen-md');
+  if(zenLevel===2)el.classList.add('zen-lg');
+  // Update button label
+  const btn=$('zen-toggle');
+  if(btn){
+    btn.textContent=['Aa','A+','A++'][zenLevel];
+    btn.classList.toggle('active',zenLevel>0);
+  }
+}
+function toggleZenMode(){
+  zenLevel=(zenLevel+1)%3;
+  localStorage.setItem('node_zen',String(zenLevel));
+  applyZenMode();
+}
+
+/* ═══ BREADCRUMB / NAVIGATION HISTORY ═══
+   historyStack holds previous article contexts so the user can climb back
+   through an Echo exploration chain. Push on echo, pop on back, clear on fresh. */
+let historyStack=[];
+let _curFrom='saved';   // Tracks the 'from' context of the currently-open article
+
+/* ═══ KNOWLEDGE GRAPH — force-directed keyword co-occurrence visualization ═══ */
+const GRAPH_STOP=new Set([...ECHO_STOP,'neuron','every','alphasignal','valley','tinkerers',
+  "ai's",'ai-powered','ai-driven','ai-based','ai-enabled','code']);
+function normKw(kw){return kw.replace(/['']s$/,'')}
+
+function buildGraphData(stories,topN){
+  topN=topN||35;
+  const freq={},cooc={};
+  for(const s of stories){
+    const raw=extractKeywords(s).map(normKw).filter(k=>!GRAPH_STOP.has(k.toLowerCase()));
+    const unique=[...new Set(raw)];
+    for(const kw of unique)freq[kw]=(freq[kw]||0)+1;
+    for(let i=0;i<unique.length;i++)
+      for(let j=i+1;j<unique.length;j++){
+        const pair=[unique[i],unique[j]].sort().join('|');
+        cooc[pair]=(cooc[pair]||0)+1;
+      }
+  }
+  const topKws=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,topN).map(([k])=>k);
+  const topSet=new Set(topKws);
+  const nodes=topKws.map(kw=>({id:kw,freq:freq[kw],x:0,y:0,vx:0,vy:0,dragging:false}));
+  const edges=[];
+  for(const[pair,w]of Object.entries(cooc)){
+    const[a,b]=pair.split('|');
+    if(topSet.has(a)&&topSet.has(b)&&w>=2)edges.push({source:a,target:b,weight:w});
+  }
+  return{nodes,edges};
+}
+
+function tickGraph(nodes,edges,W,H){
+  const nm={};nodes.forEach(n=>nm[n.id]=n);
+  // Repulsion
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+    const a=nodes[i],b=nodes[j];
+    let dx=b.x-a.x,dy=b.y-a.y;
+    const d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+    const f=1400/(d*d);
+    const fx=(dx/d)*f,fy=(dy/d)*f;
+    a.vx-=fx;a.vy-=fy;b.vx+=fx;b.vy+=fy;
+  }
+  // Attraction along edges
+  for(const e of edges){
+    const a=nm[e.source],b=nm[e.target];
+    if(!a||!b)continue;
+    let dx=b.x-a.x,dy=b.y-a.y;
+    const d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+    const f=(d-90)*0.007*Math.min(e.weight,6);
+    const fx=(dx/d)*f,fy=(dy/d)*f;
+    a.vx+=fx;a.vy+=fy;b.vx-=fx;b.vy-=fy;
+  }
+  // Center gravity
+  for(const n of nodes){n.vx+=(W/2-n.x)*0.004;n.vy+=(H/2-n.y)*0.004}
+  // Apply + damp + bound
+  for(const n of nodes){
+    if(n.dragging)continue;
+    n.vx*=0.86;n.vy*=0.86;
+    n.x+=n.vx;n.y+=n.vy;
+    n.x=Math.max(35,Math.min(W-35,n.x));
+    n.y=Math.max(35,Math.min(H-35,n.y));
+  }
+}
+
+function drawGraph(ctx,nodes,edges,W,H,hover){
+  ctx.clearRect(0,0,W,H);
+  const nm={};nodes.forEach(n=>nm[n.id]=n);
+  const maxF=Math.max(...nodes.map(n=>n.freq));
+  // Edges
+  for(const e of edges){
+    const a=nm[e.source],b=nm[e.target];if(!a||!b)continue;
+    const hot=hover&&(e.source===hover||e.target===hover);
+    ctx.strokeStyle=hot?'rgba(245,158,11,0.50)':'rgba(255,255,255,0.05)';
+    ctx.lineWidth=hot?Math.min(3,e.weight*0.6):Math.min(1.5,e.weight*0.3);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  // Nodes
+  for(const n of nodes){
+    const r=5+(n.freq/maxF)*16;
+    const isH=hover===n.id;
+    const isN=hover&&edges.some(e=>(e.source===hover&&e.target===n.id)||(e.target===hover&&e.source===n.id));
+    ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+    if(isH){ctx.fillStyle='#F59E0B';ctx.shadowColor='rgba(245,158,11,0.5)';ctx.shadowBlur=18}
+    else if(isN){ctx.fillStyle='rgba(245,158,11,0.40)';ctx.shadowBlur=0}
+    else if(hover){ctx.fillStyle='rgba(255,255,255,0.10)';ctx.shadowBlur=0}
+    else{ctx.fillStyle='rgba(255,255,255,0.32)';ctx.shadowBlur=0}
+    ctx.fill();ctx.shadowBlur=0;
+    // Label
+    if(r>=7||isH||isN){
+      ctx.fillStyle=isH?'#FCD34D':isN?'rgba(252,211,77,0.70)':'rgba(255,255,255,0.42)';
+      ctx.font=`${isH?700:500} ${Math.max(10,r*0.75)}px Outfit`;
+      ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText(n.id,n.x,n.y-r-3);
+    }
+  }
+}
+
+let _gData=null,_gAnim=null,_gHover=null,_gDrag=null,_gW=0,_gH=0,_gCtx=null;
+
+function initGraph(){
+  const cvs=$('graph-canvas');if(!cvs)return;
+  const par=cvs.parentElement;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  _gW=par.clientWidth;_gH=par.clientHeight-cvs.offsetTop;
+  cvs.style.width=_gW+'px';cvs.style.height=_gH+'px';
+  cvs.width=_gW*dpr;cvs.height=_gH*dpr;
+  _gCtx=cvs.getContext('2d');
+  _gCtx.setTransform(dpr,0,0,dpr,0,0);
+
+  if(!_gData){
+    _gData=buildGraphData(ALL,35);
+    _gData.nodes.forEach((n,i)=>{
+      n.x=_gW/2+Math.cos(i*0.42)*(_gW*0.28)+(Math.random()-0.5)*50;
+      n.y=_gH/2+Math.sin(i*0.42)*(_gH*0.28)+(Math.random()-0.5)*50;
+    });
+    // Interaction handlers
+    const maxF=Math.max(..._gData.nodes.map(n=>n.freq));
+    function hit(mx,my){
+      for(const n of _gData.nodes){
+        const r=5+(n.freq/maxF)*16;
+        if(Math.hypot(mx-n.x,my-n.y)<=r+5)return n;
+      }return null;
+    }
+    let dsx=0,dsy=0;
+    cvs.addEventListener('mousemove',e=>{
+      const r=cvs.getBoundingClientRect();
+      const mx=e.clientX-r.left,my=e.clientY-r.top;
+      if(_gDrag){_gDrag.x=mx;_gDrag.y=my;_gDrag.vx=0;_gDrag.vy=0}
+      else{const h=hit(mx,my);_gHover=h?h.id:null;cvs.style.cursor=h?'pointer':'default'}
+    });
+    cvs.addEventListener('mousedown',e=>{
+      const r=cvs.getBoundingClientRect();
+      const mx=e.clientX-r.left,my=e.clientY-r.top;
+      const h=hit(mx,my);
+      if(h){_gDrag=h;h.dragging=true;dsx=mx;dsy=my;e.preventDefault()}
+    });
+    window.addEventListener('mouseup',()=>{
+      if(_gDrag){
+        _gDrag.dragging=false;
+        if(Math.hypot(_gDrag.x-dsx,_gDrag.y-dsy)<5){
+          const kw=_gDrag.id;
+          go('feed');
+          setTimeout(()=>searchForKeyword(kw),150);
+        }
+        _gDrag=null;
+      }
+    });
+  }
+  $('graph-sub').textContent=`${_gData.nodes.length} entities · ${_gData.edges.length} connections · ${ALL.length} stories`;
+  // Start animation
+  if(_gAnim)cancelAnimationFrame(_gAnim);
+  function frame(){
+    if(view!=='graph'){_gAnim=null;return}
+    tickGraph(_gData.nodes,_gData.edges,_gW,_gH);
+    drawGraph(_gCtx,_gData.nodes,_gData.edges,_gW,_gH,_gHover);
+    _gAnim=requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* ═══ EXPORT BRIEFING — Saved stories → downloadable Markdown file ═══ */
+function exportBriefing(){
+  if(!fs||fs.size===0){
+    const t=$('toast');
+    t.textContent='No saved stories to export';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2000);
+    return;
+  }
+  const saved=ALL.filter(s=>fs.has(s.id+''))
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+  const today=new Date().toISOString().slice(0,10);
+
+  let md=`# ◧ Node Intelligence Briefing\n\n`;
+  md+=`> Generated: **${today}** · ${saved.length} curated ${saved.length===1?'story':'stories'}\n\n`;
+  md+=`---\n\n`;
+
+  saved.forEach((s,i)=>{
+    const arts=s.articles||[];
+    const src=arts[0]?.source_name||'Unknown';
+    const url=arts[0]?.url||'';
+    const cat=(CAT_MAP[s.category]||{}).name_en||s.category||'';
+    const kws=extractKeywords(s).map(k=>`\`#${k}\``).join(' ');
+    const coverage=arts.length>1?` · ${arts.length} sources`:'';
+
+    md+=`## ${i+1}. ${s.headline}\n\n`;
+    md+=`**${s.date}** · ${src}${coverage} · *${cat}*\n\n`;
+
+    if(s.summary){
+      md+=`> ${s.summary}\n\n`;
+    }
+
+    // Include scraped full_text excerpt if available
+    const ft=arts.find(a=>a.full_text&&a.full_text.length>200);
+    if(ft){
+      const excerpt=ft.full_text.substring(0,500).replace(/\n+/g,'\n>\n> ');
+      md+=`**Original excerpt:**\n\n> ${excerpt}${ft.full_text.length>500?'...':''}\n\n`;
+    }
+
+    if(kws)md+=`Tags: ${kws}\n\n`;
+
+    // Source links
+    if(arts.length){
+      md+=`**Sources:**\n`;
+      for(const a of arts){
+        if(a.url)md+=`- [${a.source_name||'Link'}](${a.url})\n`;
+      }
+      md+=`\n`;
+    }
+
+    md+=`---\n\n`;
+  });
+
+  md+=`*Exported from [◧ Node](https://github.com) — AI Intelligence Terminal*\n`;
+
+  // Trigger download via Blob API
+  const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  const href=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=href;
+  a.download=`Node_Briefing_${today}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(href);
+
+  // Success toast
+  const t=$('toast');
+  t.textContent=`Exported ${saved.length} stories as Markdown`;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function searchForKeyword(kw){
+  // Jump from a Detail keyword pill → Search mode with that term preloaded.
+  // Abandons any in-progress echo-exploration chain (topic-jump, not backtrack).
+  historyStack.length=0;
+  closeArt();
+  setTimeout(()=>{
+    toggleSearch(true);                           // open search bar
+    $('search-input').value=kw;
+    searchQ=kw;
+    stackIdx=0;
+    render();
+    renderSearchPanel();
+    saveSearchHistory(kw);                        // persist into recent
+  },350);
+}
+
+function navigateToEcho(idx,from){
+  // Called when user clicks an Echo card — push current article and descend.
+  // IMPORTANT: push BEFORE closeArt (which nulls cur), then use nav='back' in openArt so it doesn't clear the stack.
+  if(cur)historyStack.push({id:cur.id,from:_curFrom||'saved'});
+  closeArt();
+  setTimeout(()=>openArt(idx,from,'back'),350);
+}
+
+function goBack(){
+  if(!historyStack.length)return;
+  const prev=historyStack.pop();
+  const idx=ALL.findIndex(s=>s.id===prev.id);
+  if(idx<0){renderBreadcrumb();return}
+  closeArt();
+  setTimeout(()=>openArt(idx,prev.from,'back'),350);
+}
+
+function renderBreadcrumb(){
+  const bc=$('art-breadcrumb');
+  if(!bc)return;
+  if(!historyStack.length){
+    bc.style.display='none';
+    bc.innerHTML='';
+    return;
+  }
+  const prev=historyStack[historyStack.length-1];
+  const prevStory=ALL.find(s=>s.id===prev.id);
+  const prevTitle=prevStory?prevStory.headline:'previous story';
+  const depth=historyStack.length;
+  bc.style.display='block';
+  bc.innerHTML=`
+    <button class="art-breadcrumb-btn" onclick="goBack()" aria-label="Back to previous article">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      <span class="art-breadcrumb-label">Back to</span>
+      <span class="art-breadcrumb-title">${esc(prevTitle)}</span>
+      ${depth>1?`<span class="art-breadcrumb-depth">${depth}</span>`:''}
+    </button>
+  `;
+}
+
+/* ═══ ARTICLE DETAIL ═══ */
+function openArt(idx,from,nav){
+  const list=from==='saved'?ALL:flt();
+  const s=list[idx];if(!s)return;
+  // History stack management — 'back' means stack was already handled by caller.
+  // Any other nav mode (fresh card tap, saved tap, etc.) clears the exploration chain.
+  if(nav!=='back')historyStack.length=0;
+  _curFrom=from;
+  cur=s;
+  rs.add(s.id+'');localStorage.setItem('ai_read',JSON.stringify([...rs]));
+
+  const bg=CBGS[idx%3];
+  const inner=$('art-inner');
+  inner.style.background=bg;
+  $('art-top').style.background=bg;
+
+  const cat=CAT_MAP[s.category]||{};
+  const ib=fs.has(s.id+'');
+  const src=(s.articles&&s.articles[0])?s.articles[0].source_name:'';
+  const follows=JSON.parse(localStorage.getItem('ai_follows')||'[]');
+  const isFollowed=follows.includes(src);
+
+  $('art-bk').innerHTML=starSvg(ib);
+  $('art-bk').classList.toggle('on',ib);
+
+  // Content priority (Slice A+B+AI-Valley-cleanup fix).
+  //   1. full_text (scraped newsletter prose from Slice B, or cleaned archive from clean_ai_valley)
+  //   2. per-article content_snippet (per-story LLM extraction)
+  //   3. story.summary (story-level LLM aggregate — last resort)
+  let fullText='';
+  let isOriginal=false;
+  const arts=s.articles||[];
+
+  // 1. Any article with full_text? Use the longest one (threshold 100 chars to accept cleaned archives).
+  const scraped=arts.filter(a=>a.full_text&&a.full_text.length>100)
+    .sort((a,b)=>b.full_text.length-a.full_text.length);
+  if(scraped.length){
+    fullText=scraped[0].full_text;
+    isOriginal=true;
+  }else{
+    // 2. Gather unique content_snippets, dedupe near-identical ones.
+    const seen=new Set();
+    const snippets=[];
+    for(const a of arts){
+      const t=(a.content_snippet||'').trim();
+      if(!t||t.length<20)continue;
+      const key=t.substring(0,80).toLowerCase();
+      if(seen.has(key))continue;
+      seen.add(key);
+      snippets.push(t);
+    }
+    if(snippets.length){
+      fullText=snippets.join('\n\n');
+    }else{
+      // 3. Last resort — story-level summary.
+      fullText=s.summary||'';
+    }
+  }
+  // Paragraph wrapping — split on blank lines, wrap each chunk in <p>, escape for safety.
+  // Also scrub blockquote artifacts (" > " → " — ") left by BeautifulSoup HTML extraction.
+  const bodyHtml=fullText.split(/\n\n+/).map(p=>{
+    const clean=p.replace(/\n/g,' ')
+                 .replace(/^\s*>\s*/,'')          // strip leading blockquote marker
+                 .replace(/\s+>\s+/g,' — ')       // mid-paragraph markers → em-dash
+                 .replace(/\s+/g,' ')
+                 .trim();
+    return clean?`<p>${esc(clean)}</p>`:'';
+  }).filter(Boolean).join('');
+
+  const links=(s.articles||[]).map(a=>{
+    const fav=faviconUrl(a.url);
+    return `
+    <a class="art-link" href="${a.url||'#'}" target="_blank" rel="noopener">
+      ${fav?`<img class="art-link-fav" src="${fav}" alt="" onerror="this.style.display='none'">`:`
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>`}
+      <div style="flex:1">
+        <div>${esc(a.source_name)}</div>
+        <div class="art-link-url">${esc((a.url||'').replace(/^https?:\/\//,'').substring(0,50))}</div>
+      </div>
+    </a>`;
+  }).join('');
+
+  // "Read original" — floats above detail; links to first article URL
+  const primaryUrl=(s.articles||[])[0]?.url||'';
+  const readOrig=primaryUrl?`
+    <div class="read-orig-wrap">
+      <a class="read-orig-btn" href="${primaryUrl}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        Read original
+      </a>
+    </div>`:'';
+
+  // Keyword pills — topic chips that jump from Detail → Search
+  const pillKeywords=extractKeywords(s);
+  const pillsBlock=pillKeywords.length?`
+    <div class="art-pills">
+      ${pillKeywords.map(kw=>{
+        const safe=esc(kw).replace(/'/g,'&#39;');
+        return `<button class="art-pill" onclick="searchForKeyword('${kw.replace(/[\\']/g,m=>'\\'+m)}')">${safe}</button>`;
+      }).join('')}
+    </div>`:'';
+
+  // Story Echoes — thematically related coverage
+  const echoes=findEchoes(s,6);
+  const echoesBlock=echoes.length?`
+    <div class="echoes-section">
+      <div class="echoes-label">STORY ECHOES · ${echoes.length} related</div>
+      <div class="echoes-strip">
+        ${echoes.map(e=>{
+          const gi=ALL.indexOf(e.story);
+          const eFav=faviconUrl((e.story.articles||[])[0]?.url||'');
+          const eSrc=(e.story.articles||[])[0]?.source_name||'';
+          return `<div class="echo-card" onclick="event.stopPropagation();navigateToEcho(${gi},'saved')">
+            <div class="echo-meta">
+              ${eFav?`<img class="fav-icon" src="${eFav}" alt="" onerror="this.style.display='none'">`:''}
+              <span>${esc(eSrc)}</span>
+            </div>
+            <div class="echo-title">${esc(e.story.headline)}</div>
+            <div class="echo-spark">
+              <svg viewBox="0 0 24 24"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>
+              ${e.matched.length} match${e.matched.length>1?'es':''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`:'';
+
+  // Apply highlight to the body HTML after it's been built (highlights search term inside each <p>)
+  const bodyHtmlHi=searchQ
+    ? bodyHtml.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/g,(_,a,b,c)=>{
+        const re=new RegExp('('+searchQ.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        return a+b.replace(re,'<mark>$1</mark>')+c;
+      })
+    : bodyHtml;
+  $('art-body').innerHTML=`
+    <div class="art-cat">${cat.name_en||s.category}</div>
+    <div class="art-title">${hi(s.headline,searchQ)}</div>
+    <div class="art-info">${s.date} &middot; ${(s.articles||[]).length} source${(s.articles||[]).length>1?'s':''} &middot; ${readTime(fullText)} min read</div>
+    <div class="art-source">
+      <span class="art-sname">${esc(src)}</span>
+      <button class="follow ${isFollowed?'following':''}" onclick="toggleFollow('${esc(src)}',this)">${isFollowed?'Following':'Follow'}</button>
+    </div>
+    ${pillsBlock}
+    <div class="art-text">${bodyHtmlHi}</div>
+    ${links?`<div class="art-divider"></div><div class="art-links-title">Sources</div>${links}`:''}
+    ${echoesBlock}
+    ${readOrig}
+  `;
+
+  $('art-overlay').classList.add('open');
+  $('article').classList.add('open');
+  $('nav').style.display='none';
+  $('art-scroll').scrollTop=0;
+  renderBreadcrumb();
+  applyZenMode();
+}
+
+function closeArt(){
+  $('art-overlay').classList.remove('open');
+  $('article').classList.remove('open');
+  $('nav').style.display='';
+  cur=null;
+  render();
+}
+
+/* ═══ NAV ═══ */
+function go(v){
+  view=v;
+  if($('search-bar').classList.contains('open'))toggleSearch(false);
+  $('body-feed').style.display=v==='feed'?'flex':'none';
+  $('body-saved').style.display=v==='saved'?'block':'none';
+  $('body-graph').style.display=v==='graph'?'flex':'none';
+  $('header').style.display=v==='feed'?'':'none';
+  $('pn-feed').classList.toggle('on',v==='feed');
+  $('pn-saved').classList.toggle('on',v==='saved');
+  $('pn-graph').classList.toggle('on',v==='graph');
+  $('pn-search').classList.remove('on');
+  if(v==='saved')renderSaved();
+  if(v==='feed')render();
+  if(v==='graph')initGraph();
+}
+
+function renderSearchPanel(){
+  const el=$('search-panel');
+  if(!el)return;
+  if(searchQ&&searchQ.trim()){
+    // Build timeline from the UNFILTERED search results (before timeline slice)
+    const savedFilter=timelineFilter;
+    timelineFilter=null;
+    const allSearchResults=flt();
+    timelineFilter=savedFilter;
+    const slicedResults=savedFilter?allSearchResults.filter(x=>x.date===savedFilter):allSearchResults;
+    const total=ALL.length;
+
+    // Compute selected bar index
+    let selIdx=-1;
+    if(timelineFilter){
+      const today=new Date(TODAY+'T00:00:00Z');
+      const sel=new Date(timelineFilter+'T00:00:00Z');
+      const dayDiff=Math.round((today-sel)/864e5);
+      selIdx=29-dayDiff;
+    }
+
+    // Filter badge (shows the active date filter + clear button)
+    const filterBadge=timelineFilter
+      ? `<span class="timeline-filter-badge" onclick="timelineFilter=null;stackIdx=0;renderStack();renderSearchPanel()">
+           Drilling: <strong>${timelineFilter}</strong> (${slicedResults.length} stories)
+           <span class="close">&times;</span>
+         </span>`
+      : '';
+
+    el.innerHTML=`<div class="search-counter">
+      <div class="search-counter-text">
+        Found <strong>${allSearchResults.length}</strong> match${allSearchResults.length===1?'':'es'} across
+        headline, summary &amp; full text · searched ${total} total stories
+        ${filterBadge}
+      </div>
+      <div class="timeline-wrap">
+        <canvas id="timeline-sparkline" width="120" height="24"></canvas>
+        <span class="timeline-label">LAST 30 DAYS</span>
+      </div>
+    </div>`;
+
+    // Render sparkline + attach click handler
+    requestAnimationFrame(()=>{
+      const tlData=buildTimelineData(allSearchResults,30);
+      renderSparkline('timeline-sparkline',tlData,selIdx);
+      // Hit-testing click handler
+      const cvs=document.getElementById('timeline-sparkline');
+      if(cvs)cvs.onclick=(e)=>{
+        const rect=cvs.getBoundingClientRect();
+        const x=e.clientX-rect.left;
+        const barIdx=Math.min(29,Math.max(0,Math.floor(x/(rect.width/30))));
+        // Convert index to date
+        const today=new Date(TODAY+'T00:00:00Z');
+        const target=new Date(today);
+        target.setUTCDate(target.getUTCDate()-(29-barIdx));
+        const dateStr=target.toISOString().slice(0,10);
+        // Toggle
+        timelineFilter=(timelineFilter===dateStr)?null:dateStr;
+        stackIdx=0;
+        renderStack();
+        renderSearchPanel();
+      };
+    });
+  }else{
+    const hist=getSearchHistory();
+    if(!hist.length){
+      el.innerHTML=`<div class="search-history">
+        <span class="search-history-label">Try searching</span>
+        ${['Nvidia','OpenAI','Anthropic','GPT-5','open source','funding']
+          .map(w=>`<button class="search-chip" onclick="applySearch('${w}')">${w}</button>`).join('')}
+      </div>`;
+    }else{
+      el.innerHTML=`<div class="search-history">
+        <span class="search-history-label">Recent</span>
+        ${hist.map(w=>`<button class="search-chip" onclick="applySearch('${w.replace(/'/g,"\\'")}')">${esc(w)}</button>`).join('')}
+        <button class="search-chip clear" onclick="clearSearchHistory()">Clear</button>
+      </div>`;
+    }
+  }
+}
+function applySearch(q){
+  $('search-input').value=q;
+  searchQ=q;
+  stackIdx=0;
+  render();
+  renderSearchPanel();
+}
+function onSearchEnter(){
+  if(searchQ&&searchQ.trim().length>=2)saveSearchHistory(searchQ.trim());
+  renderSearchPanel();
+}
+function toggleSearch(forceOpen){
+  const bar=$('search-bar');
+  const open=forceOpen!==undefined?forceOpen:!bar.classList.contains('open');
+  bar.classList.toggle('open',open);
+  // Mutual exclusion: search open → deactivate other nav dots
+  $('pn-search').classList.toggle('on',open);
+  if(open){
+    $('pn-feed').classList.remove('on');
+    $('pn-saved').classList.remove('on');
+    $('search-input').focus();
+    renderSearchPanel();
+  }else{
+    // Restore the correct tab state when search closes
+    $('pn-feed').classList.toggle('on',view==='feed');
+    $('pn-saved').classList.toggle('on',view==='saved');
+    $('search-input').value='';searchQ='';timelineFilter=null;stackIdx=0;render();
+  }
+}
+function onSearch(v){searchQ=v;timelineFilter=null;stackIdx=0;renderStack();renderSearchPanel()}
+
+/* ═══ ACTIONS ═══ */
+function toggleFav(id){
+  const sid=id+'';
+  const wasBookmarked=fs.has(sid);
+  if(wasBookmarked)fs.delete(sid);else fs.add(sid);
+  localStorage.setItem('ai_fav',JSON.stringify([...fs]));
+  // Affinity: bookmark = strong interest signal (+1 per keyword)
+  if(!wasBookmarked){
+    const story=ALL.find(s=>s.id+''===sid);
+    if(story)bumpAffinity(story,1);
+  }
+  // In-place update on feed so the spring+glow animation isn't wiped by a re-render.
+  if(view==='feed'){
+    const btn=document.querySelector('.card-foot .bk-btn[data-id="'+sid+'"]');
+    if(btn){
+      const isNow=fs.has(sid);
+      btn.classList.toggle('on',isNow);
+      btn.innerHTML=starSvg(isNow);
+    }
+  }else{
+    renderSaved();
+  }
+  // Sync the detail view's star if the currently-open article is this one
+  if(cur&&cur.id+''===sid){
+    $('art-bk').innerHTML=starSvg(fs.has(sid));
+    $('art-bk').classList.toggle('on',fs.has(sid));
+  }
+}
+function toggleStar(){if(cur)toggleFav(cur.id)}
+function toggleFollow(name,btn){
+  const follows=JSON.parse(localStorage.getItem('ai_follows')||'[]');
+  const idx=follows.indexOf(name);
+  if(idx>-1){follows.splice(idx,1);btn.textContent='Follow';btn.classList.remove('following')}
+  else{follows.push(name);btn.textContent='Following';btn.classList.add('following')}
+  localStorage.setItem('ai_follows',JSON.stringify(follows));
+}
+function copyArt(){
+  if(!cur)return;
+  const src=(cur.articles||[]).map(a=>a.url).filter(Boolean).join('\n');
+  navigator.clipboard.writeText(`${cur.headline}\n\n${cur.summary||''}\n\nDate: ${cur.date}\n\nSources:\n${src}`);
+  showToast('Copied to clipboard');
+}
+function showToast(msg){
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+/* ═══ KEYBOARD ═══ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(cur){
+      if(historyStack.length>0)goBack();           // climb one rung first
+      else closeArt();                              // fully close when at root
+    }else if($('search-bar').classList.contains('open'))toggleSearch(false);
+  }
+  if(!cur&&view==='feed'){
+    const stories=flt();
+    if(e.key==='ArrowLeft'&&stackIdx>0){stackIdx--;renderStack()}
+    if(e.key==='ArrowRight'&&stackIdx<stories.length-1){stackIdx++;renderStack()}
+    if(e.key==='Enter'&&stories.length)openArt(stackIdx);
+  }
+});
+
+/* ═══ FETCH ═══ */
+async function manualFetch(){
+  const btn=$('refresh-btn');btn.classList.add('spinning');
+  try{
+    await fetch('/api/fetch');
+    const r=await fetch('/api/stories');const d=await r.json();
+    ALL=d.stories||[];CATS=d.categories||[];TODAY=d.today||'';
+    CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
+    stackIdx=0;
+    const tc=ALL.filter(s=>s.date===TODAY).length;
+    const wc=ALL.filter(s=>isW(s.date)).length;
+    filter.period=tc>0?'day':wc>0?'week':'month';
+    render();
+    showToast(`${ALL.filter(s=>isT(s.date)).length} stories today`);
+  }catch(e){showToast('Fetch failed')}
+  btn.classList.remove('spinning');
+}
+
+/* ═══ INIT ═══ */
+async function loadData(){
+  try{
+    const r=await fetch('/api/stories');const d=await r.json();
+    ALL=d.stories||[];CATS=d.categories||[];TODAY=d.today||'';
+    CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
+
+    const tc=ALL.filter(s=>s.date===TODAY).length;
+    if(tc===0){
+      $('loading-text').textContent='Fetching today\'s news...';
+      try{
+        await fetch('/api/fetch');
+        const r2=await fetch('/api/stories');const d2=await r2.json();
+        ALL=d2.stories||[];CATS=d2.categories||[];TODAY=d2.today||'';
+        CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
+      }catch(e2){}
+    }
+
+    const tc2=ALL.filter(s=>s.date===TODAY).length;
+    const wc=ALL.filter(s=>isW(s.date)).length;
+    filter.period=tc2>0?'day':wc>0?'week':'month';
+
+    $('loading').classList.add('hide');
+    setTimeout(()=>$('loading').style.display='none',300);
+    render();
+  }catch(e){
+    $('loading-text').textContent='Failed to load. Retrying...';
+    setTimeout(loadData,3000);
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

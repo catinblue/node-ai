@@ -1,0 +1,53 @@
+# ═══ SECRETS ═══
+.env
+
+# ═══ GENERATED OUTPUT (contains embedded data) ═══
+digest.html
+
+# ═══ DATABASE ═══
+news.db
+news.db-wal
+news.db-shm
+
+# ═══ SESSION ARTIFACTS (private development history) ═══
+docs/SESSION_LOG.md
+docs/SESSION_LOG_FINAL.md
+docs/superpowers/
+
+# ═══ SCREENSHOTS (Playwright test output) ═══
+*.png
+*.jpg
+*.jpeg
+
+# ═══ TOOL CONFIGS (local only) ═══
+.claude/
+.superpowers/
+.playwright-mcp/
+
+# ═══ PYTHON ═══
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# ═══ OS ═══
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ═══ IDE ═══
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ═══ MISC ═══
+*.log
+*.tmp
+node_modules/
