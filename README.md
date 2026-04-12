@@ -138,3 +138,4 @@ python scheduler.py  # Configured for 7:30 AM and 6:30 PM
 - **Frontend**: Vanilla JS, CSS3, Canvas 2D (zero frameworks, zero build tools)
 - **Fonts**: Outfit (body), Fraunces (display/drop caps)
 - **Physics**: Custom Verlet integration (ripple engine), Coulomb+Hooke force simulation (knowledge graph)
+
