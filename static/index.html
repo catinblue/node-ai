@@ -320,13 +320,14 @@ html,body{
 /* Search bar — enhanced with result counter, history, and timeline sparkline */
 .search-counter{
   display:flex;
+  flex-wrap:wrap;
   align-items:center;
-  gap:12px;
+  gap:8px 12px;
   padding:12px 20px 2px;
   color:var(--page-text3);
   font-size:12px;font-weight:500;letter-spacing:0.02em;
 }
-.search-counter-text{flex:1;min-width:0;line-height:1.45}
+.search-counter-text{flex:1 1 250px;min-width:200px;line-height:1.45}
 .search-counter strong{color:var(--page-text);font-weight:600}
 #timeline-sparkline{
   flex-shrink:0;
