@@ -24,7 +24,7 @@ python generate.py --no-fetch
 
 ### Content Engine
 - **Multi-source aggregation** — AlphaSignal, AI Valley, The Neuron, Every, AI Tinkerers via Kill the Newsletter RSS proxy
-- **LLM story extraction** — Groq (Mistral Small) extracts individual stories from newsletter HTML
+- **LLM story extraction** — Mistral AI (Mistral Small Latest) extracts individual stories from newsletter HTML
 - **Cross-newsletter deduplication** — Stories covered by multiple sources merge into single entries ranked by coverage count
 - **Original prose scraping** — `scrape_ktn_stories.py` recovers human-written newsletter text via BeautifulSoup section matching
 - **Content priority chain** — `full_text` (scraped) > `content_snippet` (LLM per-article) > `summary` (LLM aggregate)
@@ -61,7 +61,7 @@ python generate.py --no-fetch
 Kill the Newsletter feed (Atom XML)
         │
         ▼
-   fetcher.py ────── LLM extraction (Groq Mistral Small)
+   fetcher.py ────── LLM extraction (Mistral AI)
         │
         ▼
    database.py ───── SQLite: articles, stories, story_articles
@@ -85,7 +85,7 @@ Kill the Newsletter feed (Atom XML)
 |------|---------|
 | `generate.py` | Pipeline orchestrator: fetch → categorize → scrape → generate |
 | `fetcher.py` | RSS ingestion, KTN newsletter LLM extraction, API fetchers |
-| `categorizer.py` | Cross-newsletter dedup + categorization via Groq |
+| `categorizer.py` | Cross-newsletter dedup + categorization via Mistral AI |
 | `database.py` | SQLite schema, CRUD, migrations (`full_text` column) |
 | `sources.py` | Feed URLs + 9 category definitions (data-driven) |
 | `scrape_ktn_stories.py` | KTN section extraction via BeautifulSoup keyword matching |
@@ -97,7 +97,7 @@ Kill the Newsletter feed (Atom XML)
 
 | Service | Model | Purpose | Cost |
 |---------|-------|---------|------|
-| Groq | Mistral Small Latest | Story extraction + categorization | Free tier: 100K tokens/day |
+| Mistral AI | Mistral Small Latest | Story extraction + categorization | Free tier available |
 
 ### Performance (Telemetry)
 
@@ -117,7 +117,7 @@ Kill the Newsletter feed (Atom XML)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `KTN_FEED_ID` | Yes | Kill the Newsletter feed identifier |
-| `MSITRAL_API_KEY` | Yes | Groq API key for LLM inference |
+| `MSITRAL_API_KEY` | Yes | Mistral AI API key for LLM inference |
 
 ### Adding Newsletter Sources
 
