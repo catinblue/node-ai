@@ -1,5 +1,5 @@
 """
-AI News Digest — Scheduler
+Node — Scheduler
 
 Run this alongside Streamlit to auto-fetch and categorize articles on a schedule.
 Usage: python scheduler.py

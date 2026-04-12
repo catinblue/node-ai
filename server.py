@@ -1,5 +1,5 @@
 """
-AI News Digest — Flask API Server
+Node — Flask API Server
 """
 
 from datetime import datetime, timezone

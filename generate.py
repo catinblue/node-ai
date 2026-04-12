@@ -1,5 +1,5 @@
 """
-AI News Digest — Generate static HTML digest page with typewriter design.
+Node — Generate static HTML digest page with typewriter design.
 
 Usage:
     python generate.py              # fetch + categorize + generate

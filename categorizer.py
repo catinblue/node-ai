@@ -128,7 +128,7 @@ def categorize_articles(date_str):
 
     print(f"Categorizing {len(articles)} articles for {date_str}...")
 
-    # Groq has token limits — batch if needed (70b model handles ~6000 tokens input)
+    # Mistral has token limits — batch if needed (~6000 tokens input per call)
     MAX_BATCH = 80
     all_stories_count = 0
 

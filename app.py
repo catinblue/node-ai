@@ -1,5 +1,5 @@
 """
-AI News Digest — Streamlit UI
+Node — Streamlit UI
 """
 
 import streamlit as st
@@ -13,12 +13,12 @@ from categorizer import categorize_articles
 # Category lookup
 CAT_MAP = {c["id"]: c for c in CATEGORIES}
 
-st.set_page_config(page_title="AI News Digest", page_icon="📡", layout="wide")
+st.set_page_config(page_title="Node", page_icon="📡", layout="wide")
 
 # ── Sidebar ──────────────────────────────────────────────
 
 with st.sidebar:
-    st.title("📡 AI News Digest")
+    st.title("📡 Node")
 
     # Date picker
     available = get_available_dates(limit=30)

@@ -1,5 +1,5 @@
 """
-AI News Digest — Local server.
+Node — Local server.
 Usage: python serve.py
 """
 
@@ -81,6 +81,6 @@ if __name__ == "__main__":
     Path("static").mkdir(exist_ok=True)
     # Auto-fetch in background so server starts immediately
     threading.Thread(target=startup_fetch, daemon=True).start()
-    print(f"AI News Digest: http://localhost:{PORT}")
+    print(f"Node: http://localhost:{PORT}")
     webbrowser.open(f"http://localhost:{PORT}")
     app.run(host="0.0.0.0", port=PORT, debug=False)
