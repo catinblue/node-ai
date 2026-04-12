@@ -1,8 +1,8 @@
 # ═══ SECRETS ═══
 .env
 
-# ═══ GENERATED OUTPUT (contains embedded data) ═══
-digest.html
+# ═══ GENERATED OUTPUT ═══
+# digest.html is tracked — it IS the deployed app (public news data, not private)
 
 # ═══ DATABASE ═══
 news.db
