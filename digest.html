@@ -1086,8 +1086,12 @@ html,body{
   </div>
 </div>
 
-<script defer src="/_vercel/insights/script.js"></script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
+<script type="module">
+import { inject } from 'https://esm.sh/@vercel/analytics';
+import { injectSpeedInsights } from 'https://esm.sh/@vercel/speed-insights';
+inject();
+injectSpeedInsights();
+</script>
 <script>
 /* ═══ RIPPLE PAINTER — Morandi baseline + fluid distortion on swipe ═══ */
 const Ripple=(()=>{
