@@ -50,5 +50,8 @@ ehthumbs.db
 *.log
 *.tmp
 node_modules/
+package.json
+package-lock.json
+images/
 
 .vercel
