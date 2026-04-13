@@ -1,7 +1,7 @@
 """
 AI News Sources Configuration
 
-Sources: AlphaSignal, AI Valley, The Neuron, Every
+Sources: AlphaSignal, The Neuron, AI Valley, Every, AI Tinkerers
 via Kill the Newsletter (email → Atom feed)
 """
 
@@ -16,7 +16,7 @@ _KTN_URL = f"https://kill-the-newsletter.com/feeds/{_KTN_FEED_ID}.xml" if _KTN_F
 
 RSS_SOURCES = [
     {
-        "name": "Newsletters (AlphaSignal + AI Valley + The Neuron + Every)",
+        "name": "Newsletters (AlphaSignal + The Neuron + AI Valley + Every + AI Tinkerers)",
         "url": _KTN_URL,
         "language": "en",
     },

@@ -1,6 +1,27 @@
-# ◧ Node — AI Intelligence Terminal
+# Node — AI Intelligence Terminal
 
-A personal AI news intelligence terminal that aggregates 5 newsletters, extracts stories via LLM, and presents them through a physics-driven swipe interface with full-text search, knowledge graph visualization, timeline drill-down, and personalized ranking.
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
+[![Mistral AI](https://img.shields.io/badge/LLM-Mistral_AI-orange.svg)](https://mistral.ai/)
+[![No Build Tools](https://img.shields.io/badge/Frontend-No_Build_Tools-green.svg)](#tech-stack)
+
+A personal news intelligence terminal that aggregates 5 AI newsletters, extracts and deduplicates stories via LLM, and renders them as a physics-driven single-page app — with full-text search, knowledge graph, timeline drill-down, and zero-ML personalization.
+
+## How It Works
+
+```
+  Newsletters (email)              Pipeline (Python)                Browser (digest.html)
+ ┌──────────────────┐         ┌──────────────────────┐          ┌──────────────────────┐
+ │  AlphaSignal     │         │                      │          │  Swipeable card feed  │
+ │  The Neuron      │  KTN    │  fetcher.py           │  embed   │  Full-text search     │
+ │  AI Valley       │──RSS──▶ │  categorizer.py      │──JSON──▶ │  Knowledge graph      │
+ │  Every           │  feed   │  scrape_ktn_stories.py│  into    │  Timeline drill-down  │
+ │  AI Tinkerers    │         │  generate.py          │  HTML    │  Bookmarks + export   │
+ └──────────────────┘         └──────────────────────┘          └──────────────────────┘
+                                       │
+                                       ▼
+                                 SQLite (news.db)
+                              articles ←M:N→ stories
+```
 
 ## Quick Start
 
@@ -11,104 +32,132 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env: set KTN_FEED_ID and MISTRAL_API_KEY
 
-# Full pipeline: fetch → categorize → scrape original prose → generate HTML
+# Run the full pipeline
 python generate.py
 
-# Regenerate from existing data (no API calls, no tokens consumed)
-python generate.py --no-fetch
-
-# Open digest.html in browser — everything runs client-side from there
+# Open digest.html — everything runs client-side from here
 ```
 
-## Features
+Regenerate from cached data (no API calls, no tokens consumed):
 
-### Content Engine
-- **Multi-source aggregation** — AlphaSignal, AI Valley, The Neuron, Every, AI Tinkerers via Kill the Newsletter RSS proxy
-- **LLM story extraction** — Mistral AI (Mistral Small Latest) extracts individual stories from newsletter HTML
-- **Cross-newsletter deduplication** — Stories covered by multiple sources merge into single entries ranked by coverage count
-- **Original prose scraping** — `scrape_ktn_stories.py` recovers human-written newsletter text via BeautifulSoup section matching
-- **Content priority chain** — `full_text` (scraped) > `content_snippet` (LLM per-article) > `summary` (LLM aggregate)
-- **8 categories** — Model Releases, Products & Tools, Industry & Business, Funding & Acquisitions, Research, Open Source, Editorial, Sci-Tech Trends
+```bash
+python generate.py --no-fetch
+```
 
-### Intelligence Engine
-- **Full-text search** — Weighted scoring: headline ×10, full_text ×5, summary ×3, snippet ×2, with freshness and coverage bonuses
-- **Story Echoes** — Proper-noun keyword collision algorithm finds thematically related stories across the corpus
-- **Breadcrumb navigation** — A→B→C exploration chain with depth badge and Escape key pop-back
-- **Keyword Pills** — Clickable `#topic` chips jump from detail view to full-text search
-- **Timeline sparkline** — 30-day Canvas bar chart showing story distribution over time
-- **Timeline drill-down** — Click any bar to slice results to a single day
-- **Knowledge Graph** — Force-directed Canvas visualization of keyword co-occurrence (Coulomb repulsion + Hooke attraction)
-- **Personalization** — Zero-ML affinity matrix: bookmarks (+1/keyword) and searches (+0.5) reorder the feed
+---
 
-### Interaction
-- **Tinder-style swipe** — Horizontal card swiping with Quintic Out easing and edge glow offset
-- **Ripple lighting** — Energy-sensing elliptical Canvas blooms on swipe, screen-blended onto cards
-- **5-layer card deck** — Background cards with proportional stagger for physical depth
-- **Scrubbable slider** — Draggable progress bar with amber glowing thumb
-- **Bookmark micro-interaction** — Spring pop + glow pulse animation (in-place DOM update)
-- **Zen Reading Mode** — 3 font scales (16/18/20px) via Aa toggle, persisted in localStorage
-- **Export to Markdown** — One-click briefing download with tags, sources, and excerpts
+## Pipeline
+
+Four stages. `--no-fetch` skips the first three (fetch + categorize + scrape) and regenerates HTML from existing data only:
+
+| Stage | File | What It Does |
+|-------|------|--------------|
+| **Fetch** | `fetcher.py` | Polls KTN Atom feed, sends newsletter HTML to Mistral AI, extracts individual stories |
+| **Categorize** | `categorizer.py` | Merges same-topic stories across newsletters, assigns 1 of 8 categories, ranks by cross-coverage |
+| **Scrape** | `scrape_ktn_stories.py` | Recovers original newsletter prose via BeautifulSoup keyword matching |
+| **Generate** | `generate.py` | Embeds story JSON into `static/index.html`, outputs self-contained `digest.html` |
+
+### Content Priority Chain
+
+```
+full_text (scraped original prose)
+    └─ fallback ─▶ content_snippet (LLM per-article extract)
+                        └─ fallback ─▶ summary (LLM aggregate)
+```
+
+### Categories
+
+| Category | Scope |
+|----------|-------|
+| Model Releases | New model launches, benchmarks, capabilities |
+| Products & Tools | AI products, features, updates |
+| Industry & Business | Trends, policy, regulation, adoption |
+| Funding & Acquisitions | Startup funding, M&A, valuations |
+| Research | Papers, breakthroughs, new techniques |
+| Open Source | Models, datasets, frameworks |
+| Editorial | Long-form deep dives (Every) |
+| Sci-Tech Trends | Cross-disciplinary science beyond pure AI |
+
+---
+
+## Frontend
+
+Single-file SPA. ~2200 lines of vanilla JS + CSS + Canvas 2D. Zero frameworks, zero build tools. Loads Google Fonts, Vercel Analytics/Speed Insights (via esm.sh), and Google favicon API at runtime.
 
 ### Views
-- **Feed** — Swipeable card stack with content-hugging layout
-- **Search** — Full-text results with keyword highlighting and timeline
-- **Graph** — Force-directed knowledge map (35 entities, drag + hover + click-to-search)
-- **Saved** — Bento-lite bookmark list with Export .MD button
 
-## Architecture
+| View | Features |
+|------|----------|
+| **Feed** | Tinder-style swipeable card stack, 5-layer depth stagger, ripple lighting via Canvas, scrubbable slider |
+| **Search** | Weighted full-text scoring, keyword highlighting, 30-day timeline sparkline, click-to-drill-down by day |
+| **Graph** | Force-directed keyword co-occurrence map (Coulomb repulsion + Hooke attraction), drag + hover + click-to-search |
+| **Saved** | Bento-lite bookmark grid, one-click export to Markdown with tags, sources, and excerpts |
+
+### Intelligence Features
+
+| Feature | How It Works |
+|---------|--------------|
+| **Full-text search** | Weighted scoring: headline ×10, full_text ×5, summary ×3, snippet ×2, with freshness and coverage bonuses |
+| **Story Echoes** | Proper-noun keyword collision finds related stories across the corpus |
+| **Breadcrumb navigation** | A→B→C exploration chain with depth badge and Escape key pop-back |
+| **Keyword Pills** | Clickable `#topic` chips jump from detail view to search |
+| **Timeline drill-down** | Click any sparkline bar to slice results to a single day |
+| **Knowledge Graph** | 35-entity force-directed Canvas visualization with drag, hover, click-to-search |
+| **Personalization** | Zero-ML affinity matrix: bookmarks (+1/keyword) and searches (+0.5) reorder the feed |
+
+### Interaction Design
+
+| Element | Detail |
+|---------|--------|
+| Swipe easing | Quintic Out — `cubic-bezier(0.23, 1, 0.32, 1)` |
+| Ripple lighting | Energy-sensing elliptical Canvas blooms, screen-blended onto cards |
+| Bookmark | Spring pop + glow pulse animation, in-place DOM update |
+| Zen Reading Mode | 3 font scales (16/18/20px) via Aa toggle, persisted in localStorage |
+| Drop cap | Fraunces serif, 3em, on first paragraph of detail view |
+
+---
+
+## Repository Structure
 
 ```
-Kill the Newsletter feed (Atom XML)
-        │
-        ▼
-   fetcher.py ────── LLM extraction (Mistral AI)
-        │
-        ▼
-   database.py ───── SQLite: articles, stories, story_articles
-        │
-        ▼
-  categorizer.py ─── Deduplication + categorization via LLM
-        │
-        ▼
-  scrape_ktn_stories.py ── Newsletter prose extraction (BeautifulSoup)
-        │
-        ▼
-   generate.py ───── Builds static digest.html with embedded JSON data
-        │
-        ▼
-   digest.html ───── Single-file SPA: CSS + JS + data (opens in any browser)
+ai-news-app/
+├── generate.py                # Pipeline orchestrator: fetch → categorize → scrape → generate
+├── fetcher.py                 # RSS ingestion + Mistral LLM story extraction
+├── categorizer.py             # Cross-newsletter dedup + categorization
+├── database.py                # SQLite schema, CRUD, migrations
+├── sources.py                 # Feed URLs + 8 category definitions
+├── scrape_ktn_stories.py      # Newsletter prose recovery (BeautifulSoup)
+├── scrape_full_text.py        # Generic article extraction (trafilatura)
+├── scrape_archives.py         # Backfill historical data from Beehiiv
+├── clean_ai_valley.py         # Archive boilerplate cleanup
+├── serve.py                   # Flask dev server (/api/stories, /api/fetch)
+├── scheduler.py               # Optional APScheduler cron (7:30 AM + 6:30 PM)
+├── static/
+│   └── index.html             # Frontend template (~2200 lines)
+├── digest.html                # Generated output (self-contained SPA)
+├── vercel.json                # Vercel deployment config
+└── requirements.txt
 ```
 
-### File Overview
+## Database Schema
 
-| File | Purpose |
-|------|---------|
-| `generate.py` | Pipeline orchestrator: fetch → categorize → scrape → generate |
-| `fetcher.py` | RSS ingestion, KTN newsletter LLM extraction, API fetchers |
-| `categorizer.py` | Cross-newsletter dedup + categorization via Mistral AI |
-| `database.py` | SQLite schema, CRUD, migrations (`full_text` column) |
-| `sources.py` | Feed URLs + 8 category definitions (data-driven) |
-| `scrape_ktn_stories.py` | KTN section extraction via BeautifulSoup keyword matching |
-| `clean_ai_valley.py` | Archive boilerplate cleanup (regex decontamination) |
-| `static/index.html` | Frontend template: all CSS + JS (~2200 lines, zero dependencies) |
-| `scheduler.py` | Optional APScheduler cron: fetch → categorize → scrape → generate on schedule |
-
-### Models and APIs
-
-| Service | Model | Purpose | Cost |
-|---------|-------|---------|------|
-| Mistral AI | Mistral Small Latest | Story extraction + categorization | Free tier available |
-
-### Performance (Telemetry)
-
-| Metric | Value |
-|--------|-------|
-| Pipeline (fetch → generate) | ~30-60s end-to-end |
-| Input latency (JS event) | 0.1ms/event |
-| Long tasks during transitions | 0 (never >50ms) |
-| DOM leakage (3 navigation cycles) | 0 nodes |
-| Output file size | Single HTML, <500KB |
-| External JS/CSS dependencies | 0 |
+```
+articles                          stories
+┌─────────────────────┐          ┌─────────────────────┐
+│ id (PK)             │          │ id (PK)             │
+│ title               │          │ date                │
+│ url (UNIQUE)        │    M:N   │ category            │
+│ source_name         │◄────────▶│ headline            │
+│ published_at        │          │ summary             │
+│ summary             │          │ created_at          │
+│ content_snippet     │          └─────────────────────┘
+│ full_text           │
+│ language            │          story_articles (junction)
+└─────────────────────┘          ┌─────────────────────┐
+                                 │ story_id (FK)       │
+                                 │ article_id (FK)     │
+                                 └─────────────────────┘
+```
 
 ## Configuration
 
@@ -117,7 +166,7 @@ Kill the Newsletter feed (Atom XML)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `KTN_FEED_ID` | Yes | Kill the Newsletter feed identifier |
-| `MISTRAL_API_KEY` | Yes | Mistral AI API key for LLM inference |
+| `MISTRAL_API_KEY` | Yes | Mistral AI API key for story extraction + categorization |
 
 ### Adding Newsletter Sources
 
@@ -128,14 +177,34 @@ Kill the Newsletter feed (Atom XML)
 ### Automated Scheduling
 
 ```bash
-# Optional: run pipeline on a cron schedule
-python scheduler.py  # Configured for 7:30 AM and 6:30 PM
+python scheduler.py  # Runs pipeline at 7:30 AM and 6:30 PM Paris time
 ```
 
-### Tech Stack
+---
 
-- **Backend**: Python 3.13, SQLite3, BeautifulSoup4, trafilatura
-- **Frontend**: Vanilla JS, CSS3, Canvas 2D (zero frameworks, zero build tools)
-- **Fonts**: Outfit (body), Fraunces (display/drop caps)
-- **Physics**: Custom Verlet integration (ripple engine), Coulomb+Hooke force simulation (knowledge graph)
+## Tech Stack
 
+| Layer | Technology |
+|-------|------------|
+| **Backend** | Python 3.13, SQLite3 (WAL mode), BeautifulSoup4, trafilatura |
+| **LLM** | Mistral AI — Small Latest (extraction + categorization, free tier available) |
+| **Frontend** | Vanilla JS (ES6+), CSS3, Canvas 2D — no build tools |
+| **Runtime deps** | Google Fonts, Vercel Analytics/Speed Insights (esm.sh), Google Favicon API |
+| **Fonts** | Outfit (body), Fraunces (display / drop caps) |
+| **Physics** | Custom Verlet integration (ripple engine), Coulomb + Hooke force sim (knowledge graph) |
+| **Deployment** | Vercel (static HTML) or local Python (dynamic regeneration) |
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Pipeline end-to-end | ~30–60s |
+| Input latency (JS event) | 0.1ms |
+| Long tasks during transitions | 0 (never >50ms) |
+| DOM leakage (3 nav cycles) | 0 nodes |
+| Output file size | Single HTML, <500KB |
+| External runtime requests | Google Fonts, Vercel Analytics, favicon API |
+
+## License
+
+ISC

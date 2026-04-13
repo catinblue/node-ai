@@ -22,19 +22,31 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Restore news.db from cache
+        uses: actions/cache@v4
+        with:
+          path: news.db
+          key: news-db
+
       - name: Run full pipeline
         env:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           KTN_FEED_ID: ${{ secrets.KTN_FEED_ID }}
         run: python generate.py
 
-      - name: WAL checkpoint before commit
+      - name: WAL checkpoint before cache save
         run: python -c "import sqlite3; c=sqlite3.connect('news.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()"
+
+      - name: Save news.db to cache
+        uses: actions/cache/save@v4
+        with:
+          path: news.db
+          key: news-db
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add digest.html news.db
+          git add digest.html
           git diff --cached --quiet || git commit -m "auto: refresh digest $(date -u +%Y-%m-%d-%H%M)"
           git push

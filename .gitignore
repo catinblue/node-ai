@@ -4,14 +4,13 @@
 # ═══ GENERATED OUTPUT ═══
 # digest.html is tracked — it IS the deployed app (public news data, not private)
 
-# ═══ DATABASE (news.db is tracked — CI needs accumulated data) ═══
+# ═══ DATABASE (CI persists via actions/cache, not git) ═══
+news.db
 news.db-wal
 news.db-shm
 
 # ═══ SESSION ARTIFACTS (private development history) ═══
-docs/SESSION_LOG.md
-docs/SESSION_LOG_FINAL.md
-docs/superpowers/
+docs/
 
 # ═══ SCREENSHOTS (Playwright test output) ═══
 *.png

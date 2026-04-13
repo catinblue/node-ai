@@ -50,7 +50,7 @@ def build_prompt(articles):
     return f"""You are the editor of a top AI newsletter.
 Your job: curate today's raw articles into a sharp daily digest.
 
-The articles come from 4 newsletters: AlphaSignal, The Neuron, AI Valley, and Every.
+The articles come from 5 newsletters: AlphaSignal, The Neuron, AI Valley, Every, and AI Tinkerers.
 When MULTIPLE newsletters cover the SAME topic, that's a HOT topic — merge them
 into ONE story and include ALL their article IDs. The more newsletters cover a topic,
 the higher it should rank.
