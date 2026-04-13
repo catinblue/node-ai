@@ -277,7 +277,7 @@ def main():
     args = parser.parse_args()
 
     totals = run_pipeline(dry_run=args.dry_run, limit=args.limit, verbose=True)
-    return 0 if totals["matched"] > 0 else 1
+    return 1 if totals["errors"] > 0 else 0
 
 
 if __name__ == "__main__":
