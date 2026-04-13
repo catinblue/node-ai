@@ -77,12 +77,11 @@ def startup_fetch():
         print("Auto-fetching articles...")
         count = fetch_all()
         print(f"  {count} new articles fetched.")
-        if count > 0:
-            unprocessed = get_unprocessed_articles(today)
-            if unprocessed:
-                print(f"  Categorizing {len(unprocessed)} articles...")
-                n = categorize_articles(today)
-                print(f"  {n} stories created.")
+        unprocessed = get_unprocessed_articles(today)
+        if unprocessed:
+            print(f"  Categorizing {len(unprocessed)} articles...")
+            n = categorize_articles(today)
+            print(f"  {n} stories created.")
         # Scrape original newsletter prose for KTN articles
         try:
             from scrape_ktn_stories import run_pipeline as scrape_ktn
