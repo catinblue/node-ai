@@ -54,15 +54,6 @@ html,body{
 }
 .logo{font-size:24px;font-weight:800;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px;color:var(--page-text)}
 .logo-icon{font-size:20px;color:#F59E0B}
-.refresh-btn{
-  width:36px;height:36px;border-radius:50%;
-  background:rgba(255,255,255,0.06);border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  color:var(--page-text2);transition:all .2s;
-}
-.refresh-btn:hover{background:rgba(255,255,255,0.1)}
-.refresh-btn.spinning svg{animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
 
 /* Category pills — horizontally scrollable with fade mask on the right to hint at more */
 .cat-pills{
@@ -2458,24 +2449,6 @@ document.addEventListener('keydown',e=>{
     if(e.key==='Enter'&&stories.length)openArt(stackIdx);
   }
 });
-
-/* ═══ FETCH ═══ */
-async function manualFetch(){
-  const btn=$('refresh-btn');btn.classList.add('spinning');
-  try{
-    await fetch('/api/fetch');
-    const r=await fetch('/api/stories');const d=await r.json();
-    ALL=d.stories||[];CATS=d.categories||[];TODAY=d.today||'';
-    CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
-    stackIdx=0;
-    const tc=ALL.filter(s=>s.date===TODAY).length;
-    const wc=ALL.filter(s=>isW(s.date)).length;
-    filter.period=tc>0?'day':wc>0?'week':'month';
-    render();
-    showToast(`${ALL.filter(s=>isT(s.date)).length} stories today`);
-  }catch(e){showToast('Fetch failed')}
-  btn.classList.remove('spinning');
-}
 
 /* ═══ INIT ═══ */
 async function loadData(){

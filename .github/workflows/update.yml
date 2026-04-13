@@ -6,6 +6,9 @@ on:
     - cron: '0 16 * * *'   # Every day at 16:00 UTC (18:00 Paris summer / 17:00 winter)
   workflow_dispatch:         # Manual trigger from GitHub Actions tab
 
+permissions:
+  contents: write            # Required for git push
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -24,6 +27,9 @@ jobs:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           KTN_FEED_ID: ${{ secrets.KTN_FEED_ID }}
         run: python generate.py
+
+      - name: WAL checkpoint before commit
+        run: python -c "import sqlite3; c=sqlite3.connect('news.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()"
 
       - name: Commit and push if changed
         run: |

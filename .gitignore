@@ -4,8 +4,7 @@
 # ═══ GENERATED OUTPUT ═══
 # digest.html is tracked — it IS the deployed app (public news data, not private)
 
-# ═══ DATABASE ═══
-news.db
+# ═══ DATABASE (news.db is tracked — CI needs accumulated data) ═══
 news.db-wal
 news.db-shm
 
