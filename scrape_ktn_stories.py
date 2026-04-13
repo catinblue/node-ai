@@ -128,44 +128,42 @@ def parse_newsletter_blocks(html):
     return blocks
 
 
-def merge_adjacent_blocks(blocks, anchor_idx, max_chars=1800):
+def extract_single_block(blocks, anchor_idx):
     """
-    Given a target block's index, greedily merge it with neighbors (same story
-    body often spans several <p> tags) up to max_chars. Stops at blocks that
-    contain completely different proper nouns (heuristic — not implemented here;
-    for now just take 1-2 adjacent blocks).
+    Return ONLY the matched block — no adjacent merging.
+    Adjacent merging caused cross-story contamination (grabbing the next
+    story's opening paragraph). A single matched block is safer: if it's
+    too short, the frontend falls back to content_snippet.
     """
     if anchor_idx < 0 or anchor_idx >= len(blocks):
         return ""
-    merged = blocks[anchor_idx]
-    # Pull in the next 1-2 blocks if short
-    for j in range(anchor_idx + 1, min(anchor_idx + 3, len(blocks))):
-        if len(merged) >= max_chars:
-            break
-        nxt = blocks[j]
-        # Stop if the next block starts with a clear story-header pattern
-        if re.match(r"^[A-Z][\w\s]{0,40}:\s", nxt):
-            break
-        merged += "\n\n" + nxt
-    return merged[:max_chars]
+    return blocks[anchor_idx][:1200]
 
 
 def match_article_to_block(article_title, blocks):
     """
     Find the block that best matches an article title via keyword overlap.
+    Requires at least 2 keyword matches to avoid false positives.
+    Gives bonus weight to the first keyword (usually the company/product name).
     Returns (block_index, score) or (None, 0).
     """
     keywords = extract_anchor_keywords(article_title)
     if not keywords:
         return None, 0
 
+    primary = keywords[0] if keywords else None
     best_idx = None
     best_score = 0
     for i, block in enumerate(blocks):
-        score = sum(1 for k in keywords if k in block)
-        # Length bonus for longer blocks (prefer prose over 1-liners if scores tie)
-        if score > best_score or (score == best_score and score > 0 and best_idx is not None
-                                    and len(block) > len(blocks[best_idx]) * 1.3):
+        matches = [k for k in keywords if k in block]
+        score = len(matches)
+        if score < 2:
+            continue
+        if primary and primary in matches:
+            score += 2
+        if len(block) > 200:
+            score += 1
+        if score > best_score:
             best_score = score
             best_idx = i
     return best_idx, best_score
@@ -189,18 +187,30 @@ def process_newsletter(base_url, articles, dry_run=False):
 
     stats = {"matched": 0, "skipped": 0, "total": len(articles), "blocks": len(blocks)}
 
+    # Score ALL (article, block) candidates first, then assign by highest score.
+    # Each block can only be assigned to ONE article (exclusive matching).
+    candidates = []
     for art in articles:
         idx, score = match_article_to_block(art["title"], blocks)
-        if idx is None or score == 0:
+        if idx is not None and score > 0:
+            candidates.append((score, art, idx))
+
+    # Sort by score descending — best matches get first pick
+    candidates.sort(key=lambda x: -x[0])
+    used_blocks = set()
+
+    for score, art, idx in candidates:
+        if idx in used_blocks:
             stats["skipped"] += 1
             continue
 
-        body = merge_adjacent_blocks(blocks, idx)
+        body = extract_single_block(blocks, idx)
         current = art.get("content_snippet") or ""
-        # Only store if the new body is meaningfully longer than the existing snippet
         if len(body) < len(current) * MIN_IMPROVE_FACTOR:
             stats["skipped"] += 1
             continue
+
+        used_blocks.add(idx)
 
         if dry_run:
             safe_title = art["title"][:55].encode("ascii", "replace").decode()

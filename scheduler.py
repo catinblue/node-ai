@@ -1,18 +1,20 @@
 """
 Node — Scheduler
 
-Run this alongside Streamlit to auto-fetch and categorize articles on a schedule.
+Auto-fetch, categorize, scrape original prose, and regenerate digest.html on a schedule.
 Usage: python scheduler.py
 """
 
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from fetcher import fetch_all
 from categorizer import categorize_articles
+from scrape_ktn_stories import run_pipeline as scrape_ktn_full_text
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,7 +53,7 @@ def get_schedule_config():
 # ── Job ───────────────────────────────────────────────────
 
 def run_digest():
-    """Fetch all sources then categorize today's articles."""
+    """Full pipeline: fetch → categorize → scrape original prose → regenerate digest.html."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     log.info("Starting scheduled digest run for %s", today)
 
@@ -67,6 +69,22 @@ def run_digest():
         log.info("Created %d stories", stories)
     except Exception:
         log.exception("Categorization failed")
+
+    try:
+        scrape_ktn_full_text(verbose=False)
+        log.info("KTN full_text scraping complete")
+    except Exception:
+        log.exception("KTN scraping failed")
+
+    try:
+        from generate import generate_html, OUTPUT_PATH
+        from database import get_all_stories
+        all_stories = get_all_stories(limit=300)
+        html = generate_html(all_stories, today)
+        OUTPUT_PATH.write_text(html, encoding="utf-8")
+        log.info("Regenerated %s (%d stories)", OUTPUT_PATH, len(all_stories))
+    except Exception:
+        log.exception("HTML generation failed")
 
 
 # ── Main ──────────────────────────────────────────────────

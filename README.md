@@ -9,7 +9,7 @@ pip install -r requirements.txt
 
 # Configure API keys
 cp .env.example .env
-# Edit .env: set KTN_FEED_ID and MSITRAL_API_KEY
+# Edit .env: set KTN_FEED_ID and MISTRAL_API_KEY
 
 # Full pipeline: fetch → categorize → scrape original prose → generate HTML
 python generate.py
@@ -28,7 +28,7 @@ python generate.py --no-fetch
 - **Cross-newsletter deduplication** — Stories covered by multiple sources merge into single entries ranked by coverage count
 - **Original prose scraping** — `scrape_ktn_stories.py` recovers human-written newsletter text via BeautifulSoup section matching
 - **Content priority chain** — `full_text` (scraped) > `content_snippet` (LLM per-article) > `summary` (LLM aggregate)
-- **9 categories** — Model Releases, Products & Tools, Industry & Business, Funding & Acquisitions, Research, Open Source, Editorial, Sci-Tech Trends
+- **8 categories** — Model Releases, Products & Tools, Industry & Business, Funding & Acquisitions, Research, Open Source, Editorial, Sci-Tech Trends
 
 ### Intelligence Engine
 - **Full-text search** — Weighted scoring: headline ×10, full_text ×5, summary ×3, snippet ×2, with freshness and coverage bonuses
@@ -87,11 +87,11 @@ Kill the Newsletter feed (Atom XML)
 | `fetcher.py` | RSS ingestion, KTN newsletter LLM extraction, API fetchers |
 | `categorizer.py` | Cross-newsletter dedup + categorization via Mistral AI |
 | `database.py` | SQLite schema, CRUD, migrations (`full_text` column) |
-| `sources.py` | Feed URLs + 9 category definitions (data-driven) |
+| `sources.py` | Feed URLs + 8 category definitions (data-driven) |
 | `scrape_ktn_stories.py` | KTN section extraction via BeautifulSoup keyword matching |
 | `clean_ai_valley.py` | Archive boilerplate cleanup (regex decontamination) |
 | `static/index.html` | Frontend template: all CSS + JS (~2200 lines, zero dependencies) |
-| `scheduler.py` | Optional APScheduler cron for automated pipeline runs |
+| `scheduler.py` | Optional APScheduler cron: fetch → categorize → scrape → generate on schedule |
 
 ### Models and APIs
 
@@ -117,7 +117,7 @@ Kill the Newsletter feed (Atom XML)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `KTN_FEED_ID` | Yes | Kill the Newsletter feed identifier |
-| `MSITRAL_API_KEY` | Yes | Mistral AI API key for LLM inference |
+| `MISTRAL_API_KEY` | Yes | Mistral AI API key for LLM inference |
 
 ### Adding Newsletter Sources
 

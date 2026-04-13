@@ -51,3 +51,5 @@ ehthumbs.db
 *.log
 *.tmp
 node_modules/
+
+.vercel

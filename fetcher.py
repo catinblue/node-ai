@@ -94,7 +94,7 @@ def extract_stories_from_newsletter(text, source_label):
     from dotenv import load_dotenv
 
     load_dotenv()
-    api_key = os.getenv("MSITRAL_API_KEY")
+    api_key = os.getenv("MISTRAL_API_KEY")
 
     # Truncate to fit in context window
     text = text[:6000]
@@ -209,8 +209,10 @@ def fetch_one_source(source):
                 source_label = "Every"
             elif "aitinkerers" in a_lower or "tinkerers" in t_lower:
                 source_label = "AI Tinkerers"
+            elif "batch" in a_lower or "deeplearning" in a_lower or "the batch" in t_lower:
+                source_label = "The Batch"
             else:
-                source_label = "AI Valley"
+                source_label = "Unknown"
 
             text = get_newsletter_text(entry)
             if len(text) > 200:  # Skip if too short (probably noise)

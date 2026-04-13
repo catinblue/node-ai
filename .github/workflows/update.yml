@@ -1,0 +1,34 @@
+name: Update Node digest
+
+on:
+  schedule:
+    - cron: '0 6 * * *'    # Every day at 06:00 UTC (8:00 Paris summer / 7:00 winter)
+    - cron: '0 16 * * *'   # Every day at 16:00 UTC (18:00 Paris summer / 17:00 winter)
+  workflow_dispatch:         # Manual trigger from GitHub Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run full pipeline
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          KTN_FEED_ID: ${{ secrets.KTN_FEED_ID }}
+        run: python generate.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add digest.html news.db
+          git diff --cached --quiet || git commit -m "auto: refresh digest $(date -u +%Y-%m-%d-%H%M)"
+          git push

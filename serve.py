@@ -55,13 +55,18 @@ def api_fetch():
             unprocessed = get_unprocessed_articles(today)
             if unprocessed:
                 stories_count = categorize_articles(today)
+            try:
+                from scrape_ktn_stories import run_pipeline as scrape_ktn
+                scrape_ktn(verbose=False)
+            except Exception:
+                pass
             return jsonify({"status": "ok", "new_articles": count, "stories_created": stories_count})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
 
 
 def startup_fetch():
-    """Auto-fetch new articles on server startup."""
+    """Auto-fetch new articles on server startup (full pipeline)."""
     try:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         print("Auto-fetching articles...")
@@ -73,6 +78,13 @@ def startup_fetch():
                 print(f"  Categorizing {len(unprocessed)} articles...")
                 n = categorize_articles(today)
                 print(f"  {n} stories created.")
+        # Scrape original newsletter prose for KTN articles
+        try:
+            from scrape_ktn_stories import run_pipeline as scrape_ktn
+            scrape_ktn(verbose=False)
+            print("  KTN full_text scraping complete.")
+        except Exception as e:
+            print(f"  KTN scraping error: {e}")
     except Exception as e:
         print(f"  Startup fetch error: {e}")
 

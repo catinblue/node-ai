@@ -15,7 +15,7 @@ from database import get_unprocessed_articles, insert_story
 
 load_dotenv()
 
-MISTRAL_API_KEY = os.getenv("MSITRAL_API_KEY")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 MODEL = "mistral-small-latest"
 
