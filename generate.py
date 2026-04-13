@@ -28,6 +28,7 @@ CAT_COLORS = {
     "research": "#059669",
     "open_source": "#7c3aed",
     "editorial": "#d97706",
+    "sci_tech_trends": "#0891b2",
 }
 
 

@@ -26,6 +26,7 @@ CAT_STYLES = {
     "research":            {"color": "#34d399", "glow": "52,211,153",  "grad": "135deg, #022c22, #064e3b"},
     "open_source":         {"color": "#c084fc", "glow": "192,132,252", "grad": "135deg, #2e1065, #3b0764"},
     "editorial":           {"color": "#fb923c", "glow": "251,146,60",  "grad": "135deg, #431407, #7c2d12"},
+    "sci_tech_trends":     {"color": "#06b6d4", "glow": "6,182,212",   "grad": "135deg, #083344, #164e63"},
 }
 
 app = Flask(__name__, static_folder="static")
@@ -55,12 +56,16 @@ def api_fetch():
             unprocessed = get_unprocessed_articles(today)
             if unprocessed:
                 stories_count = categorize_articles(today)
+            scrape_error = None
             try:
                 from scrape_ktn_stories import run_pipeline as scrape_ktn
                 scrape_ktn(verbose=False)
-            except Exception:
-                pass
-            return jsonify({"status": "ok", "new_articles": count, "stories_created": stories_count})
+            except Exception as e:
+                scrape_error = str(e)
+            result = {"status": "ok", "new_articles": count, "stories_created": stories_count}
+            if scrape_error:
+                result["scrape_warning"] = scrape_error
+            return jsonify(result)
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
 
