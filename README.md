@@ -38,11 +38,13 @@ python generate.py
 # Open digest.html — everything runs client-side from here
 ```
 
-Regenerate from cached data (no API calls, no tokens consumed):
+Regenerate HTML from an existing local database (no API calls, no tokens consumed):
 
 ```bash
 python generate.py --no-fetch
 ```
+
+> Requires a local `news.db` from a previous run. A fresh clone has no database — run the full pipeline first.
 
 ---
 
