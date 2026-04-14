@@ -205,7 +205,7 @@ python scheduler.py  # Runs pipeline at 7:30 AM and 6:30 PM Paris time
 | Long tasks during transitions | 0 (never >50ms) |
 | DOM leakage (3 nav cycles) | 0 nodes |
 | Output file size | Single HTML, <500KB |
-| External runtime requests | Google Fonts, Vercel Analytics, favicon API |
+| External runtime requests | Google Fonts, esm.sh (Vercel Analytics / Speed Insights), Google Favicon API |
 
 ## License
 
