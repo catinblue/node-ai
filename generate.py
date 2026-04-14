@@ -69,9 +69,16 @@ document.getElementById('stack-slider').addEventListener('input', function(e) {{
     return html
 
 
+MIN_STORIES = 5  # refuse to publish a near-empty digest
+
+
 def main():
     no_fetch = "--no-fetch" in sys.argv
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    if no_fetch and get_all_stories(limit=1) == []:
+        print("ERROR: --no-fetch but database has no stories. Run without --no-fetch first.")
+        sys.exit(1)
 
     if not no_fetch:
         print("Fetching articles...")
@@ -95,6 +102,10 @@ def main():
             print(f"  [WARN] KTN scraping failed: {e}")
 
     all_stories = get_all_stories(limit=300)
+
+    if len(all_stories) < MIN_STORIES:
+        print(f"ERROR: only {len(all_stories)} stories in database (minimum {MIN_STORIES}). Aborting to avoid publishing an empty digest.")
+        sys.exit(1)
 
     print(f"\nGenerating digest ({len(all_stories)} total stories)...")
     html = generate_html(all_stories, today)
