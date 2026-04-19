@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from database import get_connection, update_article_full_text
+from database import get_connection, mark_full_text_status, update_article_full_text
 
 
 FETCH_SLEEP = 1.0
@@ -63,6 +63,7 @@ def get_ktn_articles_by_newsletter():
            INNER JOIN story_articles sa ON a.id = sa.article_id
            WHERE a.url LIKE 'https://kill-the-newsletter.com%'
              AND (a.full_text IS NULL OR a.full_text = '')
+             AND a.full_text_status IS NULL
            ORDER BY a.id"""
     ).fetchall()
     conn.close()
@@ -174,7 +175,9 @@ def process_newsletter(base_url, articles, dry_run=False):
     try:
         r = requests.get(base_url, headers={"User-Agent": USER_AGENT}, timeout=30)
         if r.status_code == 404:
-            # KTN purges older entries — expected, not an error
+            # KTN purges older entries — mark terminal so we don't retry every run.
+            if not dry_run:
+                mark_full_text_status([a["id"] for a in articles], "expired")
             return {"expired": True, "matched": 0, "skipped": 0, "total": len(articles)}
         r.raise_for_status()
         r.encoding = "utf-8"

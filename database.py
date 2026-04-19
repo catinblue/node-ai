@@ -63,6 +63,13 @@ def init_db():
         conn.execute("ALTER TABLE articles ADD COLUMN full_text_fetched_at TIMESTAMP")
     except sqlite3.OperationalError:
         pass
+    # Migration: terminal status so we never retry dead URLs (KTN 404 etc.)
+    # Values: NULL = pending, 'ok' = have content, 'expired' = KTN gone,
+    #         'no_download' | 'no_extract' | 'too_short' | 'error' = terminal failure
+    try:
+        conn.execute("ALTER TABLE articles ADD COLUMN full_text_status TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -226,13 +233,38 @@ def get_all_stories(limit=200):
 
 
 def update_article_full_text(article_id, full_text):
-    """Persist scraped full text for an article."""
+    """Persist scraped full text for an article and mark its status as 'ok'."""
     conn = get_connection()
     conn.execute(
         """UPDATE articles
-           SET full_text = ?, full_text_fetched_at = CURRENT_TIMESTAMP
+           SET full_text = ?, full_text_fetched_at = CURRENT_TIMESTAMP,
+               full_text_status = 'ok'
            WHERE id = ?""",
         (full_text, article_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def mark_full_text_status(article_ids, status):
+    """Mark a batch of articles with a terminal full_text status so subsequent
+    pipeline runs don't re-attempt them. Allowed values:
+      'expired'     — KTN source is gone (404)
+      'no_download' — downloader returned empty
+      'no_extract'  — extractor returned nothing
+      'too_short'   — content shorter than MIN_BODY_LENGTH
+      'error'       — any other exception
+    Selective retry: clear the status (UPDATE ... SET full_text_status = NULL
+    WHERE full_text_status = '...') to re-enqueue a specific class."""
+    ids = list(article_ids)
+    if not ids:
+        return
+    conn = get_connection()
+    placeholders = ",".join("?" for _ in ids)
+    conn.execute(
+        f"UPDATE articles SET full_text_status = ?, full_text_fetched_at = CURRENT_TIMESTAMP "
+        f"WHERE id IN ({placeholders})",
+        (status, *ids),
     )
     conn.commit()
     conn.close()
@@ -242,7 +274,7 @@ def get_articles_needing_full_text(limit=None, since_days=14):
     """
     Return articles published in the last `since_days` that are linked to a story
     (so we only scrape articles that actually appear in the digest) and don't yet
-    have full_text. Prevents wasting HTTP on orphan records.
+    have full_text AND haven't been marked as a terminal failure.
     """
     conn = get_connection()
     sql = """
@@ -250,6 +282,7 @@ def get_articles_needing_full_text(limit=None, since_days=14):
         FROM articles a
         INNER JOIN story_articles sa ON a.id = sa.article_id
         WHERE (a.full_text IS NULL OR a.full_text = '')
+          AND a.full_text_status IS NULL
           AND a.url IS NOT NULL AND a.url != ''
           AND date(a.published_at) >= date('now', ?)
         ORDER BY a.published_at DESC

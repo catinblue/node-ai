@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import trafilatura
 
-from database import get_articles_needing_full_text, update_article_full_text
+from database import get_articles_needing_full_text, mark_full_text_status, update_article_full_text
 
 
 FETCH_SLEEP = 1.0          # pacing between requests — polite to news sites
@@ -30,14 +30,22 @@ def process_article(article):
     Returns (status, length_or_message).
 
     status ∈ {'ok', 'no_download', 'no_extract', 'too_short', 'error'}
+
+    Every terminal status is persisted via mark_full_text_status so next runs
+    skip the URL instead of retrying endlessly. To retry a specific class
+    (e.g. after bumping MIN_BODY_LENGTH), clear those rows manually:
+      UPDATE articles SET full_text_status = NULL WHERE full_text_status = 'too_short';
     """
+    aid = article["id"]
     url = article["url"]
     try:
         downloaded = trafilatura.fetch_url(url)
     except Exception as e:
+        mark_full_text_status([aid], "error")
         return "error", f"fetch raised: {e.__class__.__name__}: {e}"
 
     if not downloaded:
+        mark_full_text_status([aid], "no_download")
         return "no_download", "empty response"
 
     try:
@@ -48,15 +56,18 @@ def process_article(article):
             favor_precision=True,
         )
     except Exception as e:
+        mark_full_text_status([aid], "error")
         return "error", f"extract raised: {e.__class__.__name__}: {e}"
 
     if not content:
+        mark_full_text_status([aid], "no_extract")
         return "no_extract", "trafilatura returned None"
 
     if len(content) < MIN_BODY_LENGTH:
+        mark_full_text_status([aid], "too_short")
         return "too_short", f"{len(content)} chars"
 
-    update_article_full_text(article["id"], content)
+    update_article_full_text(aid, content)   # implicitly sets status='ok'
     return "ok", len(content)
 
 
