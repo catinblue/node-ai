@@ -174,8 +174,7 @@ ai-news-app/
 ├── vercel.json                # Vercel rewrite: / → /digest.html
 ├── .github/workflows/         # GitHub Actions cron (06:00 + 16:00 UTC)
 ├── requirements.txt
-├── README.md                  # This file
-└── HANDOFF.md                 # Full engineering handoff for new maintainers
+└── README.md                  # This file
 ```
 
 ### Database Schema
@@ -257,10 +256,6 @@ python scheduler.py   # 07:30 + 18:30 Europe/Paris
 | Repeat-visit network | None (shell served from SW cache) |
 
 ---
-
-## Further Reading
-
-- **[HANDOFF.md](HANDOFF.md)** — full engineering handoff (~560 lines): architecture invariants, file-by-file tour, common tasks, things to NOT do, file:line quick-reference.
 
 ## License
 
