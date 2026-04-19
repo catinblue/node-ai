@@ -25,21 +25,34 @@ FETCH_TIMEOUT = 15
 MAX_ARTICLE_AGE_DAYS = 7
 
 
+def _to_utc_string(raw):
+    """Parse a date string and return UTC %Y-%m-%d %H:%M:%S, or '' if unparseable.
+
+    Pure function — no I/O, no global state. Safe to import anywhere. Every
+    ingestion path should route through this so TZ drift can't sneak back in:
+    tz-aware inputs are converted to UTC before serializing; naive inputs are
+    assumed UTC (previous behaviour preserved)."""
+    if not raw:
+        return ""
+    try:
+        dt = dateparser.parse(raw)
+        if dt is None:
+            return ""
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return ""
+
+
 def parse_published_date(entry):
-    """Extract and normalize the published date from a feed entry.
-    Always returns a UTC string — tz-aware inputs are converted to UTC before
-    serializing (previously the tz was silently dropped by strftime and then
-    re-interpreted as UTC downstream, which drifted dates by the local offset)."""
+    """Extract and normalize the published date from an RSS feed entry."""
     for field in ("published", "updated", "created"):
         raw = entry.get(field)
         if raw:
-            try:
-                dt = dateparser.parse(raw)
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            except (ValueError, TypeError):
-                continue
+            out = _to_utc_string(raw)
+            if out:
+                return out
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -312,11 +325,8 @@ def fetch_hn(source):
         if not title:
             continue
 
-        published = hit.get("created_at", "")
-        try:
-            pub_str = dateparser.parse(published).strftime("%Y-%m-%d %H:%M:%S")
-        except (ValueError, TypeError):
-            pub_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        pub_str = _to_utc_string(hit.get("created_at", "")) \
+                  or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
         points = hit.get("points", 0)
         num_comments = hit.get("num_comments", 0)
@@ -433,11 +443,8 @@ def fetch_hf_papers(source):
         upvotes = paper.get("_upvotes", 0)
         num_comments = paper.get("_numComments", 0)
 
-        published = paper.get("publishedAt", "")
-        try:
-            pub_str = dateparser.parse(published).strftime("%Y-%m-%d %H:%M:%S")
-        except (ValueError, TypeError):
-            pub_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        pub_str = _to_utc_string(paper.get("publishedAt", "")) \
+                  or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
         snippet = (paper.get("summary") or "")[:500]
         snippet = f"[{upvotes} upvotes, {num_comments} comments on HF] {snippet[:400]}"

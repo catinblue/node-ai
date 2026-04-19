@@ -13,7 +13,7 @@ import requests
 from dateutil import parser as dateparser
 
 from database import insert_article
-from fetcher import extract_stories_from_newsletter
+from fetcher import extract_stories_from_newsletter, _to_utc_string
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
@@ -24,15 +24,29 @@ SITES = [
 
 
 def get_post_slugs(base_url, max_pages=20):
-    """Get all post slugs from paginated archive pages back to Jan 2026."""
+    """Get all post slugs from paginated archive pages back to Jan 2026.
+
+    On network failure, retry once with a short backoff before giving up.
+    Previous behaviour silently treated any error as 'no more pages', which
+    truncated the backfill whenever the archive host hiccuped."""
     all_slugs = []
     seen = set()
     for page in range(1, max_pages + 1):
         url = f"{base_url}/archive" if page == 1 else f"{base_url}/archive?page={page}"
-        try:
-            resp = requests.get(url, headers=HEADERS, timeout=15)
-            resp.raise_for_status()
-        except Exception:
+        resp = None
+        for attempt in (1, 2):
+            try:
+                resp = requests.get(url, headers=HEADERS, timeout=15)
+                resp.raise_for_status()
+                break
+            except Exception as e:
+                if attempt == 1:
+                    print(f"    [WARN] page {page} fetch failed ({e}), retrying in 2s")
+                    time.sleep(2)
+                else:
+                    print(f"    [WARN] page {page} fetch failed after retry ({e}) — backfill may be incomplete past here")
+                    resp = None
+        if resp is None:
             break
 
         slugs = re.findall(r'/p/([a-z0-9][\w-]+)', resp.text)
@@ -88,13 +102,15 @@ def scrape_post(base_url, slug):
             date_pattern = re.search(r'((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})', html)
             date_str = date_pattern.group(1) if date_pattern else ""
 
-    try:
-        pub_date = dateparser.parse(date_str).strftime("%Y-%m-%d %H:%M:%S") if date_str else ""
-    except (ValueError, TypeError):
-        pub_date = ""
+    pub_date = _to_utc_string(date_str)
+
+    # Skip if we couldn't extract a usable date — inserting published_at=""
+    # would create orphans (SQLite date('') is NULL, filters drop them silently).
+    if not pub_date:
+        return None
 
     # Skip if before 2026
-    if pub_date and pub_date < "2026-01-01":
+    if pub_date < "2026-01-01":
         return None
 
     # Extract body text (strip HTML)
