@@ -3,8 +3,11 @@
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Mistral AI](https://img.shields.io/badge/LLM-Mistral_AI-orange.svg)](https://mistral.ai/)
 [![PWA Installable](https://img.shields.io/badge/PWA-Installable-green.svg)](#install-as-a-mobile-app-pwa)
+[![Live Demo](https://img.shields.io/badge/Live-ai--news--app--eosin.vercel.app-black?logo=vercel&logoColor=white)](https://ai-news-app-eosin.vercel.app/)
 
 Turn 5 AI newsletters into a swipeable, installable intelligence terminal — LLM-deduplicated, physics-driven, zero backend, one Python pipeline.
+
+> 📱 **Mobile-First by Design**: Node is engineered as a pocket intelligence terminal. Best experienced on your phone via Safari (installable as a native-feeling PWA). On desktop, it renders in a focused 430px mobile frame — fully functional, but the swipe physics and UI are explicitly tuned for thumbs.
 
 ## How It Works
 
@@ -50,11 +53,12 @@ python generate.py --no-fetch
 
 ## Install as a Mobile App (PWA)
 
-Node ships as a Progressive Web App. On a deployed URL, install it like any native app:
+Node ships as a Progressive Web App. On the live deployment ([ai-news-app-eosin.vercel.app](https://ai-news-app-eosin.vercel.app/)), install it to your phone for the true 0-latency native experience:
 
-1. Open the site in **Safari** (iOS) or **Chrome** (Android)
-2. Tap **Share → Add to Home Screen**
-3. Launch from the home-screen icon — standalone mode, no browser chrome
+1. Open the link in **Safari** (iOS) or **Chrome** (Android)
+2. Tap **Share** (iOS) or the menu icon (Android)
+3. Select **"Add to Home Screen"**
+4. Launch **◧ Node** directly from your home screen — full-screen, offline-capable, no browser chrome
 
 | Feature | Behavior |
 |---------|----------|
