@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Node — AI Intelligence Terminal</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Node">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,700;9..144,900&display=swap" rel="stylesheet">
 <style>
@@ -27,10 +34,16 @@
 }
 html,body{
   height:100%;overflow:hidden;
+  overscroll-behavior-y:none;            /* kills iOS elastic bounce on vertical edges */
   background:#000;
   font-family:'Outfit',-apple-system,sans-serif;
   -webkit-font-smoothing:antialiased;
   color:var(--page-text);
+  -webkit-user-select:none;user-select:none;  /* PWA-native feel: no accidental selection on UI chrome */
+}
+/* Re-enable text selection where reading / copying is the actual intent */
+.art-text,.art-text *,input,textarea{
+  -webkit-user-select:text;user-select:text;
 }
 
 /* ═══ APP SHELL ═══ */
@@ -1923,19 +1936,29 @@ function initGraph(){
       }return null;
     }
     let dsx=0,dsy=0;
-    cvs.addEventListener('mousemove',e=>{
+    // Unified pointer handlers — same logic for mouse and touch.
+    // Touch: pressing a node surfaces the hover highlight (neighbors light up)
+    // so mobile users get the same visual feedback as desktop hover.
+    function _gPtr(e){
       const r=cvs.getBoundingClientRect();
-      const mx=e.clientX-r.left,my=e.clientY-r.top;
+      const s=e.touches?e.touches[0]:e;
+      return{x:s.clientX-r.left,y:s.clientY-r.top};
+    }
+    function _gMove(e){
+      const{x:mx,y:my}=_gPtr(e);
       if(_gDrag){_gDrag.x=mx;_gDrag.y=my;_gDrag.vx=0;_gDrag.vy=0}
       else{const h=hit(mx,my);_gHover=h?h.id:null;cvs.style.cursor=h?'pointer':'default'}
-    });
-    cvs.addEventListener('mousedown',e=>{
-      const r=cvs.getBoundingClientRect();
-      const mx=e.clientX-r.left,my=e.clientY-r.top;
+    }
+    function _gDown(e){
+      const{x:mx,y:my}=_gPtr(e);
       const h=hit(mx,my);
-      if(h){_gDrag=h;h.dragging=true;dsx=mx;dsy=my;e.preventDefault()}
-    });
-    window.addEventListener('mouseup',()=>{
+      if(h){
+        _gDrag=h;h.dragging=true;dsx=mx;dsy=my;
+        if(e.touches)_gHover=h.id;
+        if(e.cancelable)e.preventDefault();
+      }
+    }
+    function _gUp(){
       if(_gDrag){
         _gDrag.dragging=false;
         if(Math.hypot(_gDrag.x-dsx,_gDrag.y-dsy)<5){
@@ -1945,7 +1968,14 @@ function initGraph(){
         }
         _gDrag=null;
       }
-    });
+    }
+    cvs.addEventListener('mousemove',_gMove);
+    cvs.addEventListener('mousedown',_gDown);
+    window.addEventListener('mouseup',_gUp);
+    cvs.addEventListener('touchstart',_gDown,{passive:false});
+    cvs.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault();_gMove(e)},{passive:false});
+    cvs.addEventListener('touchend',_gUp);
+    cvs.addEventListener('touchcancel',_gUp);
   }
   $('graph-sub').textContent=`${_gData.nodes.length} entities · ${_gData.edges.length} connections · ${ALL.length} stories`;
   // Start animation
@@ -2482,6 +2512,11 @@ async function loadData(){
 }
 
 loadData();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,19 @@
+{
+  "name": "Node — AI Intelligence Terminal",
+  "short_name": "Node",
+  "description": "Personal AI news intelligence terminal",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0D0D",
+  "theme_color": "#0D0D0D",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
