@@ -1123,6 +1123,7 @@ const Ripple=(()=>{
   }
 
   function drawBaseline(){
+    if(W<1||H<1)return;                        // canvas not laid out yet — rad would be 0, some engines reject
     ctx.clearRect(0,0,W,H);
     for(const b of BLOBS){
       const cx=b.rx*W,cy=b.ry*H,rad=b.r*Math.min(W,H);
@@ -2481,6 +2482,7 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ═══ INIT ═══ */
+let _loadRetries=0;
 async function loadData(){
   try{
     const r=await fetch('/api/stories');const d=await r.json();
@@ -2506,8 +2508,17 @@ async function loadData(){
     setTimeout(()=>$('loading').style.display='none',300);
     render();
   }catch(e){
-    $('loading-text').textContent='Failed to load. Retrying...';
-    setTimeout(loadData,3000);
+    _loadRetries++;
+    if(_loadRetries<=2){
+      $('loading-text').textContent='Failed to load. Retrying...';
+      setTimeout(loadData,3000);
+    }else{
+      // No /api/stories endpoint reachable — likely opened via a generic static server.
+      // This template isn't meant to be served directly; point the user at the right entry points.
+      $('loading-text').innerHTML=
+        'Cannot reach <code>/api/stories</code>.<br>'+
+        'Open <code>digest.html</code> (static build) or run <code>python serve.py</code> for dev mode.';
+    }
   }
 }
 

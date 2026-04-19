@@ -1123,6 +1123,7 @@ const Ripple=(()=>{
   }
 
   function drawBaseline(){
+    if(W<1||H<1)return;                        // canvas not laid out yet — rad would be 0, some engines reject
     ctx.clearRect(0,0,W,H);
     for(const b of BLOBS){
       const cx=b.rx*W,cy=b.ry*H,rad=b.r*Math.min(W,H);

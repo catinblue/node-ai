@@ -9,7 +9,7 @@ import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, abort, jsonify, send_from_directory
 
 from database import get_all_stories, get_unprocessed_articles
 from fetcher import fetch_all
@@ -68,6 +68,20 @@ def api_fetch():
             return jsonify(result)
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
+
+
+# Serve PWA assets + digest.html from repo root.
+# Flask's built-in /static handles static/index.html at /; this catch-all
+# covers manifest.json, sw.js, icon.svg, favicon.ico, and digest.html
+# which live at the repo root (not inside static/).
+ROOT_FILES = {"manifest.json", "sw.js", "icon.svg", "favicon.ico", "digest.html"}
+
+
+@app.route("/<path:filename>")
+def root_file(filename):
+    if filename in ROOT_FILES:
+        return send_from_directory(".", filename)
+    abort(404)
 
 
 def startup_fetch():
