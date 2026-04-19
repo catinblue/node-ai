@@ -26,12 +26,18 @@ MAX_ARTICLE_AGE_DAYS = 7
 
 
 def parse_published_date(entry):
-    """Extract and normalize the published date from a feed entry."""
+    """Extract and normalize the published date from a feed entry.
+    Always returns a UTC string — tz-aware inputs are converted to UTC before
+    serializing (previously the tz was silently dropped by strftime and then
+    re-interpreted as UTC downstream, which drifted dates by the local offset)."""
     for field in ("published", "updated", "created"):
         raw = entry.get(field)
         if raw:
             try:
-                return dateparser.parse(raw).strftime("%Y-%m-%d %H:%M:%S")
+                dt = dateparser.parse(raw)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
                 continue
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -118,24 +124,21 @@ Rules:
 - If the newsletter is a deep-dive on ONE topic, return 1 item with a detailed title
 - Return ONLY the JSON array, no markdown fences"""
 
-    try:
-        resp = requests.post("https://api.mistral.ai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "mistral-small-latest", "messages": [{"role": "user", "content": prompt}],
-                  "temperature": 0.1, "max_tokens": 2000},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        raw = resp.json()["choices"][0]["message"]["content"].strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-        stories = json.loads(raw)
-        return stories
-    except Exception as e:
-        print(f"    [WARN] LLM extraction failed for {source_label}: {e}")
-        return []
+    # Let exceptions propagate — caller decides whether to fall back (e.g. store
+    # the raw newsletter as a single article) rather than silently dropping it.
+    resp = requests.post("https://api.mistral.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={"model": "mistral-small-latest", "messages": [{"role": "user", "content": prompt}],
+              "temperature": 0.1, "max_tokens": 2000},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    raw = resp.json()["choices"][0]["message"]["content"].strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+    return json.loads(raw)
 
 
 def fetch_one_source(source):
@@ -217,7 +220,23 @@ def fetch_one_source(source):
             text = get_newsletter_text(entry)
             if len(text) > 200:  # Skip if too short (probably noise)
                 print(f"    Extracting stories from {source_label}...")
-                stories = extract_stories_from_newsletter(text, source_label)
+                try:
+                    stories = extract_stories_from_newsletter(text, source_label)
+                except Exception as e:
+                    # LLM failed — don't drop the newsletter silently. Store it as
+                    # a single fallback article so the content is recoverable.
+                    print(f"    [WARN] LLM extraction failed for {source_label}: {e} — storing raw newsletter as fallback")
+                    inserted = insert_article(
+                        title=title,
+                        url=link,                    # original newsletter URL (no #story-N suffix)
+                        source_name=source_label,
+                        published_at=published,
+                        content_snippet=text[:500],
+                        language=language,
+                    )
+                    if inserted:
+                        new_count += 1
+                    continue
                 for si, story in enumerate(stories):
                     s_title = story.get("title", "").strip()
                     s_summary = story.get("summary", "").strip()

@@ -130,13 +130,17 @@ def is_url_in_db(url):
 
 
 def process_post(post, source_name, use_llm=True):
-    """Extract stories from a post and insert into DB."""
+    """Extract stories from a post and insert into DB.
+
+    Returns (count_inserted, rate_limited_flag). When rate_limited_flag is True
+    the caller should stop using the LLM for subsequent posts in this run.
+    """
     if not post or not post["text"] or len(post["text"]) < 100:
-        return 0
+        return 0, False
 
     # Skip if already scraped
     if is_url_in_db(post["url"]):
-        return 0
+        return 0, False
 
     if not use_llm:
         # Store as single article without LLM
@@ -148,17 +152,20 @@ def process_post(post, source_name, use_llm=True):
             content_snippet=post["text"][:500],
             language="en",
         )
-        return 1 if inserted else 0
+        return (1 if inserted else 0), False
 
     # Try LLM extraction
     try:
         stories = extract_stories_from_newsletter(post["text"], source_name)
     except Exception as e:
-        if "429" in str(e) or "rate_limit" in str(e):
-            print(f"    [RATE LIMIT] Switching to no-LLM mode")
-            return process_post(post, source_name, use_llm=False)
+        msg = str(e).lower()
+        if "429" in msg or "rate_limit" in msg or "rate-limit" in msg:
+            print(f"    [RATE LIMIT] Switching to no-LLM mode for remaining posts")
+            count, _ = process_post(post, source_name, use_llm=False)
+            return count, True   # signal: caller must set rate_limited=True
         print(f"    [LLM FAIL] {post['slug']}: {e}")
-        return process_post(post, source_name, use_llm=False)
+        count, _ = process_post(post, source_name, use_llm=False)
+        return count, False
 
     count = 0
     for i, story in enumerate(stories):
@@ -176,7 +183,7 @@ def process_post(post, source_name, use_llm=True):
         )
         if inserted:
             count += 1
-    return count
+    return count, False
 
 
 def main():
@@ -203,7 +210,10 @@ def main():
 
             print(f"  [{i+1}/{len(slugs)}] {slug} ({post['date'][:10]})...")
 
-            count = process_post(post, name, use_llm=use_llm and not rate_limited)
+            count, hit_rate_limit = process_post(post, name, use_llm=use_llm and not rate_limited)
+            if hit_rate_limit and not rate_limited:
+                rate_limited = True
+                print("  [RATE LIMIT] All subsequent posts in this run will skip LLM.")
             total += count
             print(f"    -> {count} stories")
 
