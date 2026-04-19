@@ -77,9 +77,17 @@ def run_digest():
         log.exception("KTN scraping failed")
 
     try:
-        from generate import generate_html, OUTPUT_PATH
+        from generate import generate_html, OUTPUT_PATH, MIN_STORIES
         from database import get_all_stories
         all_stories = get_all_stories(limit=300)
+        if len(all_stories) < MIN_STORIES:
+            # Don't rewrite digest.html with a near-empty feed — keep the last
+            # healthy build live instead of publishing a broken one.
+            log.error(
+                "Only %d stories (< MIN_STORIES=%d) — skipping digest rewrite to avoid empty publish",
+                len(all_stories), MIN_STORIES,
+            )
+            return
         html = generate_html(all_stories, today)
         OUTPUT_PATH.write_text(html, encoding="utf-8")
         log.info("Regenerated %s (%d stories)", OUTPUT_PATH, len(all_stories))

@@ -67,14 +67,25 @@ def api_fetch():
                 result["scrape_warning"] = scrape_error
             return jsonify(result)
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)})
+            # Surface the failure as HTTP 500 so clients checking status codes
+            # don't misread a pipeline crash as success.
+            return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # Serve PWA assets + digest.html from repo root.
 # Flask's built-in /static handles static/index.html at /; this catch-all
-# covers manifest.json, sw.js, icon.svg, favicon.ico, and digest.html
-# which live at the repo root (not inside static/).
-ROOT_FILES = {"manifest.json", "sw.js", "icon.svg", "favicon.ico", "digest.html"}
+# covers manifest.json, sw.js, icon.svg, and digest.html which live at the
+# repo root (not inside static/). /favicon.ico has its own dedicated route
+# below because no favicon.ico file exists — we redirect it to icon.svg.
+ROOT_FILES = {"manifest.json", "sw.js", "icon.svg", "digest.html"}
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers auto-probe /favicon.ico even when <link rel="icon"> is set.
+    # Serve icon.svg with the SVG mime type so the request resolves cleanly
+    # instead of 404-ing on every page load.
+    return send_from_directory(".", "icon.svg", mimetype="image/svg+xml")
 
 
 @app.route("/<path:filename>")
@@ -85,26 +96,29 @@ def root_file(filename):
 
 
 def startup_fetch():
-    """Auto-fetch new articles on server startup (full pipeline)."""
-    try:
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        print("Auto-fetching articles...")
-        count = fetch_all()
-        print(f"  {count} new articles fetched.")
-        unprocessed = get_unprocessed_articles(today)
-        if unprocessed:
-            print(f"  Categorizing {len(unprocessed)} articles...")
-            n = categorize_articles(today)
-            print(f"  {n} stories created.")
-        # Scrape original newsletter prose for KTN articles
+    """Auto-fetch new articles on server startup (full pipeline).
+    Takes the same _fetch_lock as /api/fetch so a user click during startup
+    can't kick off a concurrent second pipeline run."""
+    with _fetch_lock:
         try:
-            from scrape_ktn_stories import run_pipeline as scrape_ktn
-            scrape_ktn(verbose=False)
-            print("  KTN full_text scraping complete.")
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            print("Auto-fetching articles...")
+            count = fetch_all()
+            print(f"  {count} new articles fetched.")
+            unprocessed = get_unprocessed_articles(today)
+            if unprocessed:
+                print(f"  Categorizing {len(unprocessed)} articles...")
+                n = categorize_articles(today)
+                print(f"  {n} stories created.")
+            # Scrape original newsletter prose for KTN articles
+            try:
+                from scrape_ktn_stories import run_pipeline as scrape_ktn
+                scrape_ktn(verbose=False)
+                print("  KTN full_text scraping complete.")
+            except Exception as e:
+                print(f"  KTN scraping error: {e}")
         except Exception as e:
-            print(f"  KTN scraping error: {e}")
-    except Exception as e:
-        print(f"  Startup fetch error: {e}")
+            print(f"  Startup fetch error: {e}")
 
 
 if __name__ == "__main__":
