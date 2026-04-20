@@ -53,28 +53,45 @@ def get_schedule_config():
 # ── Job ───────────────────────────────────────────────────
 
 def run_digest():
-    """Full pipeline: fetch → categorize → scrape original prose → regenerate digest.html."""
+    """Full pipeline: fetch → categorize → scrape original prose → regenerate digest.html.
+
+    If any critical step (fetch or categorize) fails, we skip the digest rewrite
+    so the last healthy build stays live. KTN scraping failure is tolerated —
+    it only affects prose enrichment, not the core feed. MIN_STORIES is a
+    separate guardrail against publishing a near-empty DB.
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     log.info("Starting scheduled digest run for %s", today)
+
+    run_healthy = True
 
     try:
         count = fetch_all()
         log.info("Fetched %d new articles", count)
     except Exception:
         log.exception("Fetch failed")
-        return
+        run_healthy = False
 
     try:
         stories = categorize_articles(today)
         log.info("Created %d stories", stories)
     except Exception:
         log.exception("Categorization failed")
+        run_healthy = False
 
     try:
         scrape_ktn_full_text(verbose=False)
         log.info("KTN full_text scraping complete")
     except Exception:
         log.exception("KTN scraping failed")
+        # Tolerated — prose enrichment only, not core pipeline health.
+
+    if not run_healthy:
+        log.error(
+            "Pipeline had failures — skipping digest rewrite so the previous "
+            "healthy build stays live (no stale-as-fresh publish)."
+        )
+        return
 
     try:
         from generate import generate_html, OUTPUT_PATH, MIN_STORIES

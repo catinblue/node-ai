@@ -159,13 +159,25 @@ def categorize_articles(date_str):
                 raw = raw[:-3]
 
         try:
-            stories = json.loads(raw)
+            parsed = json.loads(raw)
         except json.JSONDecodeError as e:
             print(f"  [FAIL] JSON parse error: {e}")
             print(f"  Raw response: {raw[:500]}")
             # Include every_count — those editorials were already inserted
             # before the LLM call and must be reflected in the return value.
             return all_stories_count + every_count
+
+        # Shape validation — models sometimes wrap the array or return the
+        # wrong structure entirely; only a list of dicts is usable below.
+        if isinstance(parsed, dict):
+            stories = parsed.get("stories") or parsed.get("data") or []
+        else:
+            stories = parsed
+        if not isinstance(stories, list):
+            print(f"  [FAIL] Unexpected JSON shape (not a list): {type(stories).__name__}")
+            print(f"  Raw response: {raw[:500]}")
+            return all_stories_count + every_count
+        stories = [s for s in stories if isinstance(s, dict)]
 
         # Valid article IDs in this batch + category whitelist (LLM hallucinates)
         valid_ids = {a["id"] for a in batch}

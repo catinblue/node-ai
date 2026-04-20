@@ -2496,7 +2496,9 @@ document.addEventListener('keydown',e=>{
 let _loadRetries=0;
 async function loadData(){
   try{
-    const r=await fetch('/api/stories');const d=await r.json();
+    const r=await fetch('/api/stories');
+    if(!r.ok)throw new Error(`/api/stories ${r.status}`);
+    const d=await r.json();
     ALL=d.stories||[];CATS=d.categories||[];TODAY=d.today||'';
     CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
 
@@ -2504,11 +2506,18 @@ async function loadData(){
     if(tc===0){
       $('loading-text').textContent='Fetching today\'s news...';
       try{
-        await fetch('/api/fetch', {method:'POST'});
-        const r2=await fetch('/api/stories');const d2=await r2.json();
+        const fr=await fetch('/api/fetch', {method:'POST'});
+        if(!fr.ok)throw new Error(`/api/fetch ${fr.status}`);
+        const r2=await fetch('/api/stories');
+        if(!r2.ok)throw new Error(`/api/stories (post-fetch) ${r2.status}`);
+        const d2=await r2.json();
         ALL=d2.stories||[];CATS=d2.categories||[];TODAY=d2.today||'';
         CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
-      }catch(e2){}
+      }catch(e2){
+        // Surface the failure — keep the base /api/stories data on screen
+        // rather than silently pretending everything succeeded.
+        console.warn('Auto-fetch failed:', e2);
+      }
     }
 
     const tc2=ALL.filter(s=>s.date===TODAY).length;
