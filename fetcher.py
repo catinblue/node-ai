@@ -225,6 +225,10 @@ def fetch_one_source(source):
                 source_label = "Every"
             elif "aitinkerers" in a_lower or "tinkerers" in t_lower:
                 source_label = "AI Tinkerers"
+            # The Batch detection is kept here for future re-activation but is
+            # NOT in sources.NEWSLETTER_NAMES. If you re-subscribe to Batch via
+            # KTN, add "The Batch" to NEWSLETTER_NAMES so the categorizer prompt
+            # stays in sync with the actual roster.
             elif "batch" in a_lower or "deeplearning" in a_lower or "the batch" in t_lower:
                 source_label = "The Batch"
             else:

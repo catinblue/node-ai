@@ -14,9 +14,14 @@ load_dotenv()
 _KTN_FEED_ID = os.getenv("KTN_FEED_ID", "")
 _KTN_URL = f"https://kill-the-newsletter.com/feeds/{_KTN_FEED_ID}.xml" if _KTN_FEED_ID else ""
 
+# Active newsletter roster — the single source of truth downstream.
+# To add a source: append here AND add a detection branch in
+# fetcher.fetch_one_source (otherwise the article will be labelled "Unknown").
+NEWSLETTER_NAMES = ["AlphaSignal", "The Neuron", "AI Valley", "Every", "AI Tinkerers"]
+
 RSS_SOURCES = [
     {
-        "name": "Newsletters (AlphaSignal + The Neuron + AI Valley + Every + AI Tinkerers)",
+        "name": f"Newsletters ({' + '.join(NEWSLETTER_NAMES)})",
         "url": _KTN_URL,
         "language": "en",
     },

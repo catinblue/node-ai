@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import requests as http_requests
 from dotenv import load_dotenv
 
-from sources import CATEGORIES
+from sources import CATEGORIES, NEWSLETTER_NAMES
 from database import get_unprocessed_articles, insert_story
 
 load_dotenv()
@@ -47,10 +47,15 @@ def build_prompt(articles):
             f'  snippet: {(a.get("content_snippet") or "")[:200]}\n\n'
         )
 
+    # Build the roster string from the canonical list so the prompt never
+    # drifts from the detection code in fetcher.py.
+    _n = len(NEWSLETTER_NAMES)
+    _names = (", ".join(NEWSLETTER_NAMES[:-1]) + f", and {NEWSLETTER_NAMES[-1]}") if _n > 1 else NEWSLETTER_NAMES[0]
+
     return f"""You are the editor of a top AI newsletter.
 Your job: curate today's raw articles into a sharp daily digest.
 
-The articles come from 5 newsletters: AlphaSignal, The Neuron, AI Valley, Every, and AI Tinkerers.
+The articles come from {_n} newsletters: {_names}.
 When MULTIPLE newsletters cover the SAME topic, that's a HOT topic — merge them
 into ONE story and include ALL their article IDs. The more newsletters cover a topic,
 the higher it should rank.
