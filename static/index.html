@@ -1263,6 +1263,14 @@ function thumbColors(story){
 /* Extract domain from URL for favicon + reading time estimate */
 function domainOf(url){try{return new URL(url).hostname.replace(/^www\./,'')}catch{return ''}}
 function faviconUrl(url){const d=domainOf(url);return d?`https://www.google.com/s2/favicons?domain=${d}&sz=64`:''}
+/* Guard href injection: reject non-http(s) schemes (javascript:, data:, etc.)
+   before embedding in an href. esc() handles attribute quote escaping; this
+   handles the scheme layer that esc() can't see. */
+function safeUrl(u){
+  if(!u)return '#';
+  const s=String(u).trim();
+  return /^https?:\/\//i.test(s)?esc(s):'#';
+}
 function readTime(text){const words=(text||'').split(/\s+/).filter(Boolean).length;return Math.max(1,Math.ceil(words/200))}
 /* Extract a short one-liner hook from a summary (first sentence, capped) */
 function oneLiner(text,maxLen=140){
@@ -2193,7 +2201,7 @@ function openArt(idx,from,nav){
   const links=(s.articles||[]).map(a=>{
     const fav=faviconUrl(a.url);
     return `
-    <a class="art-link" href="${a.url||'#'}" target="_blank" rel="noopener">
+    <a class="art-link" href="${safeUrl(a.url)}" target="_blank" rel="noopener">
       ${fav?`<img class="art-link-fav" src="${fav}" alt="" onerror="this.style.display='none'">`:`
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
@@ -2209,7 +2217,7 @@ function openArt(idx,from,nav){
   const primaryUrl=(s.articles||[])[0]?.url||'';
   const readOrig=primaryUrl?`
     <div class="read-orig-wrap">
-      <a class="read-orig-btn" href="${primaryUrl}" target="_blank" rel="noopener">
+      <a class="read-orig-btn" href="${safeUrl(primaryUrl)}" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
         </svg>
@@ -2265,7 +2273,7 @@ function openArt(idx,from,nav){
     <div class="art-info">${s.date} &middot; ${(s.articles||[]).length} source${(s.articles||[]).length>1?'s':''} &middot; ${readTime(fullText)} min read</div>
     <div class="art-source">
       <span class="art-sname">${esc(src)}</span>
-      <button class="follow ${isFollowed?'following':''}" onclick="toggleFollow('${esc(src)}',this)">${isFollowed?'Following':'Follow'}</button>
+      <button class="follow ${isFollowed?'following':''}" data-source="${esc(src)}" onclick="toggleFollow(this.dataset.source,this)">${isFollowed?'Following':'Follow'}</button>
     </div>
     ${pillsBlock}
     <div class="art-text">${bodyHtmlHi}</div>
