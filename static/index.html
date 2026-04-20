@@ -2372,16 +2372,19 @@ function renderSearchPanel(){
     });
   }else{
     const hist=getSearchHistory();
+    // Chips use data-q + this.dataset.q so we never embed user input
+    // inside a JS string literal in an onclick — avoids backslash/quote
+    // escaping traps. esc() still HTML-escapes the label + attribute value.
     if(!hist.length){
       el.innerHTML=`<div class="search-history">
         <span class="search-history-label">Try searching</span>
         ${['Nvidia','OpenAI','Anthropic','GPT-5','open source','funding']
-          .map(w=>`<button class="search-chip" onclick="applySearch('${w}')">${w}</button>`).join('')}
+          .map(w=>`<button class="search-chip" data-q="${esc(w)}" onclick="applySearch(this.dataset.q)">${esc(w)}</button>`).join('')}
       </div>`;
     }else{
       el.innerHTML=`<div class="search-history">
         <span class="search-history-label">Recent</span>
-        ${hist.map(w=>`<button class="search-chip" onclick="applySearch('${w.replace(/'/g,"\\'")}')">${esc(w)}</button>`).join('')}
+        ${hist.map(w=>`<button class="search-chip" data-q="${esc(w)}" onclick="applySearch(this.dataset.q)">${esc(w)}</button>`).join('')}
         <button class="search-chip clear" onclick="clearSearchHistory()">Clear</button>
       </div>`;
     }

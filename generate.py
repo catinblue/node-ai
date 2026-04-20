@@ -32,11 +32,18 @@ CAT_COLORS = {
 }
 
 
+def _safe_json(obj):
+    """Serialize `obj` to JSON and neutralize any "</" sequence so a hostile
+    string like "</script>" inside story data cannot break out of the
+    <script> tag that embeds it in digest.html. Standard defensive pattern
+    for inline JSON in HTML."""
+    return json.dumps(obj, default=str, ensure_ascii=False).replace("</", "<\\/")
+
+
 def generate_html(all_stories, today):
-    stories_json = json.dumps(all_stories, default=str, ensure_ascii=False)
-    categories_json = json.dumps(
-        [{**c, "color": CAT_COLORS.get(c["id"], "#888")} for c in CATEGORIES],
-        ensure_ascii=False,
+    stories_json = _safe_json(all_stories)
+    categories_json = _safe_json(
+        [{**c, "color": CAT_COLORS.get(c["id"], "#888")} for c in CATEGORIES]
     )
 
     # Read the static/index.html template and inject data
