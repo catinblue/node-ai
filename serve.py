@@ -46,7 +46,7 @@ def api_stories():
     return jsonify({"stories": stories, "categories": cats, "today": today})
 
 
-@app.route("/api/fetch")
+@app.route("/api/fetch", methods=["POST"])
 def api_fetch():
     with _fetch_lock:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

@@ -24,6 +24,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;  // third-party: untouched
+  if (url.pathname.startsWith('/api/')) return; // API routes: always live, never cached
 
   e.respondWith(
     caches.open(CACHE).then((cache) =>

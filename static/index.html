@@ -2504,7 +2504,7 @@ async function loadData(){
     if(tc===0){
       $('loading-text').textContent='Fetching today\'s news...';
       try{
-        await fetch('/api/fetch');
+        await fetch('/api/fetch', {method:'POST'});
         const r2=await fetch('/api/stories');const d2=await r2.json();
         ALL=d2.stories||[];CATS=d2.categories||[];TODAY=d2.today||'';
         CAT_MAP={};CATS.forEach(c=>CAT_MAP[c.id]=c);
