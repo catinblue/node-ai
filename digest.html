@@ -294,6 +294,56 @@ html,body{
   background:var(--live);color:white;
   text-transform:uppercase;letter-spacing:0.06em;
 }
+
+/* ═══ AFFINITY GLASS-BOX ◆ — surface when a story was boosted by your history ═══ */
+.aff-diamond{
+  background:rgba(245,158,11,0.12);
+  border:1px solid rgba(245,158,11,0.28);
+  color:#B45309;
+  width:22px;height:22px;border-radius:50%;
+  font-size:10px;cursor:pointer;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease-quintic);
+  margin-left:auto;                         /* pushes the ◆ to the right edge of meta row */
+}
+.aff-diamond:hover{
+  background:rgba(245,158,11,0.22);
+  transform:scale(1.1);
+}
+.aff-diamond:active{transform:scale(0.95)}
+.aff-panel{
+  margin:8px 0 14px;
+  padding:10px 12px;
+  background:rgba(17,17,17,0.04);
+  border-left:2px solid rgba(245,158,11,0.55);
+  border-radius:6px;
+  font-size:11px;
+  animation:affIn .25s var(--ease-quintic);
+}
+.aff-panel[hidden]{display:none}
+.aff-label{
+  color:var(--text2);
+  letter-spacing:0.04em;
+  margin-bottom:6px;
+  font-weight:500;
+}
+.aff-item{
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);
+  padding:2px 0;
+}
+.aff-bullet{color:#B45309;font-size:9px;opacity:0.7}
+.aff-item em{color:var(--text2);font-style:normal;font-size:10px;font-weight:400}
+.aff-score{
+  margin-left:auto;
+  color:var(--text2);
+  font-variant-numeric:tabular-nums;
+  font-size:10px;
+}
+@keyframes affIn{
+  from{opacity:0;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
 .fav-icon{
   width:14px;height:14px;border-radius:3px;
   flex-shrink:0;
@@ -1495,6 +1545,30 @@ function affinityScore(story,aff){
   return score;
 }
 
+/* Glass-box breakdown — why did this story get surfaced?
+   Returns top 3 contributors (keyword hits + category weight) and a total.
+   Pure function of getAffinity() + story — no side effects. */
+function affinityBreakdown(story){
+  const aff=getAffinity();
+  const kws=extractKeywords(story).map(k=>normKw(k).toLowerCase());
+  const items=[];
+  const seen=new Set();
+  for(const kw of kws){
+    if(seen.has(kw))continue;
+    seen.add(kw);
+    const w=aff[kw]||0;
+    if(w>0)items.push({label:kw,score:w,isCategory:false});
+  }
+  const catW=aff['_cat:'+story.category]||0;
+  if(catW>=2){
+    const catName=(CAT_MAP[story.category]||{}).name_en||story.category;
+    items.push({label:catName,score:catW*0.5,isCategory:true});
+  }
+  items.sort((a,b)=>b.score-a.score);
+  const total=items.reduce((s,x)=>s+x.score,0);
+  return{items:items.slice(0,3),total};
+}
+
 /* Search history — persisted in localStorage, max 8 entries */
 const SH_KEY='ai_searches';
 function getSearchHistory(){try{return JSON.parse(localStorage.getItem(SH_KEY)||'[]')}catch{return[]}}
@@ -1587,6 +1661,16 @@ function renderStack(){
     ? `<span class="meta-pill">${fav?`<img class="fav-icon" src="${fav}" alt="" onerror="this.style.display='none'">`:''}${esc(src)}</span>`
     : '';
 
+  // Glass-box ◆ — only when this story was meaningfully boosted by user's history.
+  const aff=affinityBreakdown(s);
+  const showDiamond=aff.total>=2;
+  const diamondBtn=showDiamond?`<button class="aff-diamond" aria-label="Why this story is here">◆</button>`:'';
+  const affPanel=showDiamond?`
+    <div class="aff-panel" hidden>
+      <div class="aff-label">Surfaced because you've engaged with:</div>
+      ${aff.items.map(b=>`<div class="aff-item"><span class="aff-bullet">◆</span><span>${esc(b.label)}${b.isCategory?' <em>category</em>':''}</span><span class="aff-score">${Math.round(b.score*10)/10}×</span></div>`).join('')}
+    </div>`:'';
+
   card.innerHTML=`
     <div style="${readStyle};display:flex;flex-direction:column;flex:1;min-height:0">
       <div class="card-meta">
@@ -1594,7 +1678,9 @@ function renderStack(){
         ${srcBlock}
         <span class="read-time">${rt} min read</span>
         ${sc>1?`<span class="meta-pill">${sc} sources</span>`:''}
+        ${diamondBtn}
       </div>
+      ${affPanel}
       <div class="card-h">${hi(s.headline,searchQ)}</div>
       <div class="card-snippet">${hi(s.summary||'',searchQ)}</div>
       <div class="card-foot">
@@ -1618,6 +1704,18 @@ function renderStack(){
     setTimeout(()=>btn.classList.remove('pulsing'),700);
     toggleFav(s.id);
   });
+
+  // Affinity ◆ — toggle the explanation panel. Stop propagation so the
+  // card's tap-to-open doesn't fire, and so the swipe gesture isn't armed.
+  const affBtn=card.querySelector('.aff-diamond');
+  if(affBtn){
+    affBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      e.preventDefault();
+      const panel=card.querySelector('.aff-panel');
+      if(panel)panel.toggleAttribute('hidden');
+    });
+  }
 
   // Tap to open
   card._wasSwiped=false;
