@@ -186,6 +186,10 @@ def process_newsletter(base_url, articles, dry_run=False):
 
     blocks = parse_newsletter_blocks(r.text)
     if not blocks:
+        # Newsletter HTML is unparseable — mark all articles terminal so the
+        # next run doesn't re-fetch and re-fail the same HTML.
+        if not dry_run:
+            mark_full_text_status([a["id"] for a in articles], "no_extract")
         return {"error": "no content blocks", "matched": 0, "skipped": 0, "total": len(articles)}
 
     stats = {"matched": 0, "skipped": 0, "total": len(articles), "blocks": len(blocks)}
@@ -201,6 +205,7 @@ def process_newsletter(base_url, articles, dry_run=False):
     # Sort by score descending — best matches get first pick
     candidates.sort(key=lambda x: -x[0])
     used_blocks = set()
+    matched_ids = set()
 
     for score, art, idx in candidates:
         if idx in used_blocks:
@@ -214,6 +219,7 @@ def process_newsletter(base_url, articles, dry_run=False):
             continue
 
         used_blocks.add(idx)
+        matched_ids.add(art["id"])
 
         if dry_run:
             safe_title = art["title"][:55].encode("ascii", "replace").decode()
@@ -223,6 +229,14 @@ def process_newsletter(base_url, articles, dry_run=False):
         else:
             update_article_full_text(art["id"], body)
         stats["matched"] += 1
+
+    # Everything that didn't win a block (score failure, used_blocks conflict,
+    # MIN_IMPROVE_FACTOR rejection) gets a terminal 'too_short' marker so
+    # subsequent runs skip these deterministic losers.
+    if not dry_run:
+        unmatched_ids = [a["id"] for a in articles if a["id"] not in matched_ids]
+        if unmatched_ids:
+            mark_full_text_status(unmatched_ids, "too_short")
 
     return stats
 

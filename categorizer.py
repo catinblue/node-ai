@@ -163,18 +163,29 @@ def categorize_articles(date_str):
         except json.JSONDecodeError as e:
             print(f"  [FAIL] JSON parse error: {e}")
             print(f"  Raw response: {raw[:500]}")
-            return all_stories_count
+            # Include every_count — those editorials were already inserted
+            # before the LLM call and must be reflected in the return value.
+            return all_stories_count + every_count
 
-        # Valid article IDs in this batch
+        # Valid article IDs in this batch + category whitelist (LLM hallucinates)
         valid_ids = {a["id"] for a in batch}
+        valid_categories = {c["id"] for c in CATEGORIES}
+        seen_article_ids = set()   # cross-story uniqueness guard
 
         for story in stories:
-            aids = [aid for aid in story.get("article_ids", []) if aid in valid_ids]
+            aids = [aid for aid in story.get("article_ids", [])
+                    if aid in valid_ids and aid not in seen_article_ids]
             if not aids:
                 continue
+            category = story.get("category", "products_tools")
+            if category not in valid_categories:
+                # LLM invented a category not in our taxonomy — fallback rather
+                # than polluting the DB with a value the UI can't filter on.
+                category = "products_tools"
+            seen_article_ids.update(aids)
             insert_story(
                 date_str=date_str,
-                category=story.get("category", "products_tools"),
+                category=category,
                 headline=story.get("headline", "Untitled"),
                 summary=story.get("summary", ""),
                 article_ids=aids,
