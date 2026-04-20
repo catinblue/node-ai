@@ -1586,6 +1586,21 @@ function saveSearchHistory(q){
 }
 function clearSearchHistory(){localStorage.removeItem(SH_KEY);renderSearchPanel()}
 
+/* ═══ DEEP READ SIGNAL — passive affinity training via dwell time + scroll ═══
+   When a story's detail view is open for >= 30s OR the user scrolls near the
+   bottom, bump the affinity matrix by +0.7 (sits between bookmark=1.0 and
+   search=0.5 — "passive but intentional" engagement). Each story can only
+   fire once; the node_deepread set in localStorage is the idempotency guard. */
+const DR_KEY='node_deepread';
+function getDeepRead(){try{return new Set(JSON.parse(localStorage.getItem(DR_KEY)||'[]'))}catch{return new Set()}}
+function markDeepRead(storyId){
+  const s=getDeepRead();
+  if(s.has(storyId+''))return false;           // already counted — don't double-bump
+  s.add(storyId+'');
+  localStorage.setItem(DR_KEY,JSON.stringify([...s]));
+  return true;
+}
+
 function starSvg(filled){
   return`<svg width="20" height="20" viewBox="0 0 24 24" fill="${filled?'#F59E0B':'none'}" stroke="${filled?'#F59E0B':'currentColor'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
 }
@@ -2386,9 +2401,33 @@ function openArt(idx,from,nav){
   $('art-scroll').scrollTop=0;
   renderBreadcrumb();
   applyZenMode();
+
+  // Deep-read tracking — 30s dwell OR scroll-to-bottom (92% tolerance) fires once.
+  // Either signal wins; subsequent opens of the same story don't double-count
+  // because markDeepRead() guards on storyId. The cleanup closure is stashed on
+  // window so closeArt can tear it down without plumbing state through globals.
+  const _drScroll=$('art-scroll');
+  let _drFired=false;
+  const _drFire=()=>{
+    if(_drFired||!cur)return;
+    _drFired=true;
+    if(markDeepRead(cur.id))bumpAffinity(cur,0.7);
+  };
+  const _drTimer=setTimeout(_drFire,30000);
+  const _drOnScroll=()=>{
+    if(_drFired)return;
+    const ratio=(_drScroll.scrollTop+_drScroll.clientHeight)/_drScroll.scrollHeight;
+    if(ratio>=0.92)_drFire();                  // near-bottom tolerance — footer padding eats the last few px
+  };
+  _drScroll.addEventListener('scroll',_drOnScroll,{passive:true});
+  window._drCleanup=()=>{
+    clearTimeout(_drTimer);
+    _drScroll.removeEventListener('scroll',_drOnScroll);
+  };
 }
 
 function closeArt(){
+  if(window._drCleanup){window._drCleanup();window._drCleanup=null;}
   $('art-overlay').classList.remove('open');
   $('article').classList.remove('open');
   $('nav').style.display='';
