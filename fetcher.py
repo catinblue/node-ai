@@ -45,6 +45,23 @@ def _to_utc_string(raw):
         return ""
 
 
+def _as_list_of_dicts(parsed):
+    """Normalize common LLM output shapes into a clean list of dicts.
+
+    Accepts: [...], {"stories":[...]}, {"data":[...]}.
+    Raises ValueError if the shape is unusable (so callers can distinguish
+    'LLM returned an empty list' from 'LLM returned something we can't
+    iterate over'). Non-dict elements are filtered out silently.
+
+    Pure. Every caller that parses LLM JSON should route through this so
+    there's one canonical shape-validation pattern across the codebase."""
+    if isinstance(parsed, dict):
+        parsed = parsed.get("stories") or parsed.get("data") or []
+    if not isinstance(parsed, list):
+        raise ValueError(f"Unexpected JSON shape: {type(parsed).__name__}")
+    return [s for s in parsed if isinstance(s, dict)]
+
+
 def parse_published_date(entry):
     """Extract and normalize the published date from an RSS feed entry."""
     for field in ("published", "updated", "created"):
@@ -139,6 +156,8 @@ Rules:
 
     # Let exceptions propagate — caller decides whether to fall back (e.g. store
     # the raw newsletter as a single article) rather than silently dropping it.
+    # HTTP errors → raise_for_status; malformed JSON → JSONDecodeError;
+    # unexpected shape → ValueError from _as_list_of_dicts.
     resp = requests.post("https://api.mistral.ai/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         json={"model": "mistral-small-latest", "messages": [{"role": "user", "content": prompt}],
@@ -151,7 +170,7 @@ Rules:
         raw = raw.split("\n", 1)[1]
         if raw.endswith("```"):
             raw = raw[:-3]
-    return json.loads(raw)
+    return _as_list_of_dicts(json.loads(raw))
 
 
 def fetch_one_source(source):
@@ -292,13 +311,18 @@ def fetch_one_source(source):
 
 
 def fetch_all_rss():
-    """Fetch all RSS sources in parallel. Returns total new articles count."""
+    """Fetch all RSS sources in parallel. Returns total new articles count.
+    Worker crashes are isolated so one bad feed can't take down the whole run."""
     print(f"Fetching {len(RSS_SOURCES)} RSS sources...")
     total = 0
     with ThreadPoolExecutor(max_workers=8) as pool:
         futures = {pool.submit(fetch_one_source, src): src for src in RSS_SOURCES}
         for future in as_completed(futures):
-            total += future.result()
+            src = futures[future]
+            try:
+                total += future.result()
+            except Exception as e:
+                print(f"  [CRASH] {src['name']}: {e.__class__.__name__}: {e}")
     print(f"RSS done - {total} new articles.")
     return total
 

@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from sources import CATEGORIES, NEWSLETTER_NAMES
 from database import get_unprocessed_articles, insert_story
+from fetcher import _as_list_of_dicts
 
 load_dotenv()
 
@@ -172,17 +173,13 @@ def categorize_articles(date_str):
             # before the LLM call and must be reflected in the return value.
             return all_stories_count + every_count
 
-        # Shape validation — models sometimes wrap the array or return the
-        # wrong structure entirely; only a list of dicts is usable below.
-        if isinstance(parsed, dict):
-            stories = parsed.get("stories") or parsed.get("data") or []
-        else:
-            stories = parsed
-        if not isinstance(stories, list):
-            print(f"  [FAIL] Unexpected JSON shape (not a list): {type(stories).__name__}")
+        # Shape normalization (shared with fetcher's newsletter extraction).
+        try:
+            stories = _as_list_of_dicts(parsed)
+        except ValueError as e:
+            print(f"  [FAIL] {e}")
             print(f"  Raw response: {raw[:500]}")
             return all_stories_count + every_count
-        stories = [s for s in stories if isinstance(s, dict)]
 
         # Valid article IDs in this batch + category whitelist (LLM hallucinates)
         valid_ids = {a["id"] for a in batch}
