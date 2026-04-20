@@ -137,10 +137,16 @@ def scrape_post(base_url, slug):
 
 
 def is_url_in_db(url):
-    """Check if a URL (or base URL) already exists in the DB."""
+    """Check if a URL — or any of its #story-N fragments — already exists.
+    Uses an anchored fragment match ('url#%') instead of an open prefix
+    ('url%') so an existing longer slug doesn't spuriously dedup a
+    genuinely distinct shorter post (or vice versa)."""
     from database import get_connection
     conn = get_connection()
-    row = conn.execute("SELECT COUNT(*) FROM articles WHERE url LIKE ?", (url + "%",)).fetchone()
+    row = conn.execute(
+        "SELECT COUNT(*) FROM articles WHERE url = ? OR url LIKE ?",
+        (url, url + "#%"),
+    ).fetchone()
     conn.close()
     return row[0] > 0
 

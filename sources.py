@@ -19,6 +19,13 @@ _KTN_URL = f"https://kill-the-newsletter.com/feeds/{_KTN_FEED_ID}.xml" if _KTN_F
 # fetcher.fetch_one_source (otherwise the article will be labelled "Unknown").
 NEWSLETTER_NAMES = ["AlphaSignal", "The Neuron", "AI Valley", "Every", "AI Tinkerers"]
 
+# How far back we consider articles "fresh". Single source of truth:
+#   - fetcher uses it as the cutoff for skipping old RSS/API entries
+#   - database.get_unprocessed_articles uses it as the categorization window
+# Mismatch between the two was a silent bug source (articles ingested but
+# never categorized because the windows didn't align).
+MAX_ARTICLE_AGE_DAYS = 7
+
 RSS_SOURCES = [
     {
         "name": f"Newsletters ({' + '.join(NEWSLETTER_NAMES)})",

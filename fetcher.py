@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from dateutil import parser as dateparser
 
-from sources import RSS_SOURCES, API_SOURCES
+from sources import RSS_SOURCES, API_SOURCES, MAX_ARTICLE_AGE_DAYS
 from database import insert_article
 
 
@@ -21,8 +21,8 @@ HEADERS = {
 # Request timeout in seconds
 FETCH_TIMEOUT = 15
 
-# Ignore articles older than this many days
-MAX_ARTICLE_AGE_DAYS = 7
+# MAX_ARTICLE_AGE_DAYS is defined in sources.py so the fetch window and the
+# categorization window in database.get_unprocessed_articles stay aligned.
 
 
 def _to_utc_string(raw):

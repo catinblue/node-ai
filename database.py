@@ -104,16 +104,22 @@ def get_articles_for_date(date_str):
     return [dict(r) for r in rows]
 
 
-def get_unprocessed_articles(date_str):
-    """Get articles from the last 48h that haven't been assigned to a story yet."""
+def get_unprocessed_articles(date_str, window_days=None):
+    """Get articles from the last `window_days` that haven't been assigned to
+    a story yet. Defaults to sources.MAX_ARTICLE_AGE_DAYS so this window
+    always matches the fetcher's cutoff — otherwise articles ingested but
+    published earlier than the narrower window would never reach categorize."""
+    if window_days is None:
+        from sources import MAX_ARTICLE_AGE_DAYS
+        window_days = MAX_ARTICLE_AGE_DAYS
     conn = get_connection()
     rows = conn.execute(
         """SELECT a.* FROM articles a
            LEFT JOIN story_articles sa ON a.id = sa.article_id
-           WHERE date(a.published_at) BETWEEN date(?, '-1 day') AND date(?, '+1 day')
+           WHERE date(a.published_at) BETWEEN date(?, ?) AND date(?, '+1 day')
              AND sa.story_id IS NULL
            ORDER BY a.published_at DESC""",
-        (date_str, date_str),
+        (date_str, f"-{int(window_days)} days", date_str),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
