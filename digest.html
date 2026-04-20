@@ -2514,6 +2514,7 @@ function renderSearchPanel(){
         // Toggle
         timelineFilter=(timelineFilter===dateStr)?null:dateStr;
         stackIdx=0;
+        _surfaceSearchResults();
         renderStack();
         renderSearchPanel();
       };
@@ -2538,10 +2539,24 @@ function renderSearchPanel(){
     }
   }
 }
+/* Silently surface the feed view so search-result cards (rendered into
+   #stack inside #body-feed) become visible. Called by every search
+   interaction that produces cards — doesn't touch nav dots (pn-search
+   owns the indicator during active search) or the search bar itself. */
+function _surfaceSearchResults(){
+  if(view==='feed')return;
+  view='feed';
+  $('body-feed').style.display='flex';
+  $('body-saved').style.display='none';
+  $('body-graph').style.display='none';
+  $('header').style.display='';
+}
+
 function applySearch(q){
   $('search-input').value=q;
   searchQ=q;
   stackIdx=0;
+  _surfaceSearchResults();
   render();
   renderSearchPanel();
 }
@@ -2576,7 +2591,7 @@ function toggleSearch(forceOpen){
     $('search-input').value='';searchQ='';timelineFilter=null;stackIdx=0;render();
   }
 }
-function onSearch(v){searchQ=v;timelineFilter=null;stackIdx=0;renderStack();renderSearchPanel()}
+function onSearch(v){searchQ=v;timelineFilter=null;stackIdx=0;_surfaceSearchResults();renderStack();renderSearchPanel()}
 
 /* ═══ ACTIONS ═══ */
 function toggleFav(id){
