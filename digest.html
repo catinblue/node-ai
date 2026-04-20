@@ -2549,18 +2549,28 @@ function onSearchEnter(){
 function toggleSearch(forceOpen){
   const bar=$('search-bar');
   const open=forceOpen!==undefined?forceOpen:!bar.classList.contains('open');
+
+  // Search results render into the feed stack — opening search from Graph or
+  // Saved would leave both the bar (hidden inside display:none header) AND
+  // the results invisible. Force the view back to feed first, reusing go()
+  // so all view-state bookkeeping (body display, dots, rendering) stays in
+  // one canonical place.
+  if(open && view!=='feed')go('feed');
+
   bar.classList.toggle('open',open);
-  // Mutual exclusion: search open → deactivate other nav dots
+  // Mutual exclusion: search open → deactivate all other nav dots (full symmetry)
   $('pn-search').classList.toggle('on',open);
   if(open){
     $('pn-feed').classList.remove('on');
     $('pn-saved').classList.remove('on');
+    $('pn-graph').classList.remove('on');
     $('search-input').focus();
     renderSearchPanel();
   }else{
-    // Restore the correct tab state when search closes
+    // Restore the correct tab state when search closes — symmetric across all 3 views
     $('pn-feed').classList.toggle('on',view==='feed');
     $('pn-saved').classList.toggle('on',view==='saved');
+    $('pn-graph').classList.toggle('on',view==='graph');
     $('search-input').value='';searchQ='';timelineFilter=null;stackIdx=0;render();
   }
 }
