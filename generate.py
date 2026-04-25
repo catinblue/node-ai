@@ -6,9 +6,7 @@ Usage:
     python generate.py --no-fetch   # just generate from existing DB data
 """
 
-import hashlib
 import json
-import re
 import sys
 import webbrowser
 from datetime import datetime, timezone
@@ -42,70 +40,8 @@ def _safe_json(obj):
     return json.dumps(obj, default=str, ensure_ascii=False).replace("</", "<\\/")
 
 
-# Privacy hardening — strip credentials-bearing URLs before writing them to a
-# publicly-readable artifact. KTN feed/entry URLs contain the user's private
-# inbox feed ID; anyone with the URL can read the proxied newsletter content.
-# Other newsletter sources (Beehiiv archives, HN, HF Papers) are public and
-# left untouched. See ~/.claude/memory/feedback_privacy_audit_spec.md §3.4.
-_KTN_URL_PATTERN = re.compile(r'https?://kill-the-newsletter\.com/[^\s"\'<>\\]*')
-
-
-def _opaque_hash(url):
-    """Stable 16-hex SHA-256 prefix — same input always maps to same output
-    so client-side dedup/keys keep working without leaking the source URL."""
-    return hashlib.sha256(url.encode()).hexdigest()[:16]
-
-
-def _sanitize_url_for_public(url):
-    if not url:
-        return url
-    if _KTN_URL_PATTERN.match(url):
-        return f"#kts-{_opaque_hash(url)}"
-    return url
-
-
-def _scrub_text(text):
-    """Replace any embedded KTN URL inside free-text fields (snippets,
-    summaries, full_text) with the same opaque hash format used for url
-    fields. Catches LLM-extracted text that may have echoed the URL."""
-    if not text:
-        return text
-    return _KTN_URL_PATTERN.sub(lambda m: f"#kts-{_opaque_hash(m.group(0))}", text)
-
-
-def _sanitize_stories_for_public(stories):
-    """Walk every story + nested article, strip credentials from url and
-    text fields. Returns a deep-copied list — does not mutate input."""
-    out = []
-    for s in stories:
-        articles = s.get("articles") or []
-        clean_articles = []
-        for a in articles:
-            clean_articles.append({
-                **a,
-                "url": _sanitize_url_for_public(a.get("url") or ""),
-                "content_snippet": _scrub_text(a.get("content_snippet") or ""),
-                "full_text": _scrub_text(a.get("full_text") or ""),
-                "summary": _scrub_text(a.get("summary") or ""),
-            })
-        out.append({
-            **s,
-            "summary": _scrub_text(s.get("summary") or ""),
-            "articles": clean_articles,
-        })
-    return out
-
-
 def generate_html(all_stories, today):
-    all_stories = _sanitize_stories_for_public(all_stories)
     stories_json = _safe_json(all_stories)
-    # Defensive guard — if any sanitizer branch missed a path, fail loudly
-    # instead of silently shipping a leaky digest.
-    if "kill-the-newsletter.com" in stories_json:
-        raise RuntimeError(
-            "Sanitization failed: KTN URL still present in serialized output. "
-            "Check _sanitize_stories_for_public coverage."
-        )
     categories_json = _safe_json(
         [{**c, "color": CAT_COLORS.get(c["id"], "#888")} for c in CATEGORIES]
     )
